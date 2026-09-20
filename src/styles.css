@@ -998,3 +998,84 @@
 .supervisor-log-dialog .todo-edit-btn:hover{color:var(--violet)}
 .supervisor-log-dialog .todo-del:hover{color:var(--red)}
 .supervisor-log-dialog .todo-empty{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;color:var(--muted-ink);font-size:12px}
+/* ===== Tablet command-center layout ===== */
+.page-header h1,
+.focus-section-heading h2,
+.panel-heading h3,
+.brand > span {
+  font-family:var(--font-heading);
+  font-weight:400;
+  letter-spacing:0;
+}
+
+@media (min-width:769px) and (max-width:1180px){
+  html,body,#root{width:100%;min-width:0;overflow-x:hidden}
+  .plant-shell{width:100vw;min-width:0}
+  .plant-sidebar{width:224px;padding:16px 12px}
+  .plant-main{width:calc(100vw - 224px);margin-left:224px}
+  .plant-topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:12px 18px}
+  .breadcrumb{min-width:0}
+  .breadcrumb strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ws-mode-switch{grid-column:1/-1;grid-row:2;width:100%}
+  .ws-mode-switch button{flex:1;min-height:38px;padding:7px 10px;overflow:hidden;text-overflow:ellipsis}
+  .topbar-actions{min-width:0;gap:7px}
+  .topbar-clock{display:none}
+  .global-search{min-width:0;width:clamp(150px,24vw,220px)}
+  .global-search input{min-width:0;width:100%}
+  .plant-content{max-width:none;padding:22px 20px 32px}
+  .page-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:16px;margin-bottom:24px}
+  .page-header>div:first-child{min-width:0}
+  .page-header h1{font-size:22px;line-height:1.2}
+  .page-header p{font-size:14px;line-height:1.45}
+  .page-actions{justify-content:flex-end}
+  .page-actions button{min-height:40px}
+  .focus-grid{grid-template-columns:minmax(0,1fr) minmax(250px,38%);gap:16px}
+  .scheduled-card,.breakin-card{min-height:220px;padding:18px}
+  .scheduled-card h3{font-size:15px;line-height:1.35}
+  .focus-4col-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  .focus-4col-grid>.panel{min-height:330px;padding:18px}
+  .panel-heading h3{font-size:13px;line-height:1.35}
+  .shortcut-stack .nav-card{min-height:74px;padding:14px}
+  .mini-cal-day{min-height:34px}
+  .mobile-bottom{display:none}
+}
+
+@media (min-width:769px) and (max-width:900px){
+  .plant-sidebar{width:196px;padding:14px 10px}
+  .plant-main{width:calc(100vw - 196px);margin-left:196px}
+  .brand{gap:8px}
+  .brand-mark{width:34px;height:34px}
+  .brand>span{font-size:14px}
+  .nav-item{gap:9px;padding:9px 10px;font-size:12px}
+  .workspace-security{padding:11px}
+  .plant-content{padding:20px 16px 28px}
+  .page-header{grid-template-columns:1fr}
+  .page-actions{justify-content:flex-start}
+  .focus-grid{grid-template-columns:1fr 250px}
+}
+
+@media (max-width:768px){
+  html,body,#root{width:100%;min-width:0;overflow-x:hidden}
+  .plant-shell{width:100vw}
+  .plant-topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;padding:10px 12px}
+  .breadcrumb{min-width:0}
+  .breadcrumb strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ws-mode-switch{grid-column:1/-1;width:100%}
+  .ws-mode-switch button{flex:1;min-height:38px;white-space:normal;line-height:1.15}
+  .topbar-actions{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto auto;width:100%}
+  .topbar-clock{display:none}
+  .global-search{width:100%;min-width:0}
+  .global-search input{width:100%;min-width:0}
+  .plant-content{width:100%;max-width:none}
+  .page-header{display:grid;grid-template-columns:minmax(0,1fr);width:100%}
+  .page-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+  .page-actions button{justify-content:center;min-width:0;min-height:42px;padding:9px 10px}
+  .page-actions button:last-child:nth-child(3){grid-column:1/-1}
+  .focus-section-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+  .focus-section-heading h2{min-width:0;font-size:14px}
+  .focus-heading-actions{gap:4px}
+  .focus-grid{grid-template-columns:1fr}
+  .scheduled-card,.breakin-card{min-height:210px}
+  .focus-4col-grid{grid-template-columns:1fr}
+  .focus-4col-grid>.panel{min-height:300px}
+}
