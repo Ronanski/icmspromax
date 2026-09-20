@@ -1,4 +1,4 @@
-import db from '@/lib/mockDb';
+import db from '@/lib/db';
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, Edit2, X, Loader2 } from 'lucide-react';

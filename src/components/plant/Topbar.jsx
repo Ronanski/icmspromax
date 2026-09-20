@@ -1,4 +1,4 @@
-import db from '@/lib/mockDb';
+import db from '@/lib/db';
 
 import React,{useState,useEffect} from 'react';
 import {Menu, Moon, Sun, Search, LogOut, Clock} from 'lucide-react';
