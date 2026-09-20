@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useState } from "react";
 
-// The plant desk is a browser-only dashboard (local storage, live clock,
-// charts), so it is loaded after hydration instead of during server render.
+import supabase from "@/lib/supabaseClient";
+
+// The plant desk is a browser-only dashboard (live clock, charts), so it is
+// loaded after hydration instead of during server render.
 const PlantDesk = lazy(() => import("@/pages/PlantDesk.jsx"));
+const AuthPage = lazy(() => import("@/pages/AuthPage.jsx"));
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,14 +40,30 @@ function Loading() {
 }
 
 function Index() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [ready, setReady] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
 
-  if (!mounted) return <Loading />;
+  useEffect(() => {
+    let live = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!live) return;
+      setSignedIn(Boolean(data.session));
+      setReady(true);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSignedIn(Boolean(session));
+    });
+    return () => {
+      live = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  if (!ready) return <Loading />;
 
   return (
     <Suspense fallback={<Loading />}>
-      <PlantDesk />
+      {signedIn ? <PlantDesk /> : <AuthPage />}
     </Suspense>
   );
 }
