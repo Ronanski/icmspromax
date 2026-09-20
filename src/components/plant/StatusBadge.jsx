@@ -1,0 +1,2 @@
+import React from 'react';
+export default function StatusBadge({status}) {return <span className={`status-badge ${({'Open':'status-open','In-Progress':'status-progress','Completed':'status-completed','Deferred':'status-deferred'})[status]||'status-open'}`}><i/>{status==='In-Progress'?'In Progress':status}</span>;}
