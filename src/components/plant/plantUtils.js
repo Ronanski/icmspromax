@@ -1,4 +1,4 @@
-import db from '@/lib/mockDb';
+import db from '@/lib/db';
 
 import { format, differenceInCalendarDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 

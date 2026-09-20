@@ -1,4 +1,4 @@
-import db from '@/lib/mockDb';
+import db from '@/lib/db';
 
 import React,{useState} from 'react';
 import {UploadCloud,FileSpreadsheet,CheckCircle2,Loader2,ArrowRight,AlertTriangle,Zap} from 'lucide-react';

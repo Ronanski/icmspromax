@@ -1,4 +1,4 @@
-import db from '@/lib/mockDb';
+import db from '@/lib/db';
 
 import React,{useState} from 'react';
 import {Save,Loader2,UserCircle} from 'lucide-react';

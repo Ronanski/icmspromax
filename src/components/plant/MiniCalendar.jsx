@@ -1,4 +1,4 @@
-import db from '@/lib/mockDb';
+import db from '@/lib/db';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
