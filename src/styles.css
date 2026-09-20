@@ -72,9 +72,9 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --font-heading: ui-sans-serif, system-ui, sans-serif;
-    --font-body: ui-sans-serif, system-ui, sans-serif;
-    --font-display: ui-sans-serif, system-ui, sans-serif;
+    --font-heading: "Archivo Black", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "Hind", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Archivo Black", ui-sans-serif, system-ui, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -138,10 +138,10 @@
   --bg:#F0F2F5;--surface:#FFFFFF;--surface-2:#EBEEF1;--ink:#1A2733;--ink-2:#44546A;--muted-ink:#6B7785;--line:#D9DCE1;--line-2:#C4C9D0;--hover:#F5F7FA;--violet:#0A6ED1;--violet-soft:#E8F1FB;--blue:#0A6ED1;--green:#2E7D32;--amber:#ED6C02;--red:#BB0000;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);--shadow-lg:0 8px 24px rgba(0,0,0,.1);
 }
 .dark{
-  --bg:#181C21;--surface:#22272E;--surface-2:#2A3038;--ink:#E3E8EE;--ink-2:#B0B8C4;--muted-ink:#8893A0;--line:#3A4148;--line-2:#4A5158;--hover:#2A3038;--violet:#4DB1FF;--violet-soft:#0D3A5C;--blue:#4DB1FF;--green:#66BB6A;--amber:#FFA726;--red:#EF5350;--shadow:0 1px 3px rgba(0,0,0,.4);--shadow-lg:0 8px 24px rgba(0,0,0,.5);
+  --bg:#151A20;--surface:#1E252D;--surface-2:#272F38;--ink:#DDE6ED;--ink-2:#B7C2CB;--muted-ink:#8C9AA6;--line:#35404A;--line-2:#48545F;--hover:#2A333C;--violet:#2994E6;--violet-soft:#123B59;--blue:#2994E6;--green:#66BB6A;--amber:#FFA726;--red:#EF5350;--shadow:0 1px 3px rgba(0,0,0,.4);--shadow-lg:0 8px 24px rgba(0,0,0,.5);
 }
 *{box-sizing:border-box}select{color-scheme:dark}.dark select,.dark option,.dark optgroup{background-color:#22272E;color:#E3E8EE}.dark select{border-color:var(--line)}
-.plant-shell{display:flex;min-height:100vh;background:var(--bg);color:var(--ink);font-size:14px}
+.plant-shell{display:flex;width:100%;min-width:0;min-height:100vh;background:var(--bg);color:var(--ink);font-size:14px}
 .full-loader{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px;color:var(--muted-ink);background:var(--bg)}
 .full-loader.error{color:var(--red)}
 
