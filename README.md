@@ -1,29 +1,37 @@
-# 🛠️ I&C Operations and Maintenance Control System (ICMS ProMax)
+# Metrics Refinement
 
-Welcome to the **Instrumentation & Control (I&C) Operations and Maintenance Control System** — a web application engineered for streamlined plant operations management, manpower roster tracking, and work order coordination.
+EXECUTE DIRECTLY WITHOUT ASKING QUESTIONS OR SEEKING CONFIRMATION.
 
----
+Target: Analytics Page (`src/pages/Analytics.tsx` & `src/components/analytics/TotalBacklogCard.tsx`)
 
-## 🚀 Key Features
+-remove  pm vs cm period dd button. 
+-do not make the 'Choose Metrics' text in bold font. make it uniforms with its nearby filters.
 
-* **Work Order Management:** Centralized creation, tracking, status updating, and archive management for plant work orders.
-* **Manpower Master Data Hub:** Personnel roster management, shift schedules, skill tagging, and duty status tracking.
-* **Daily Shift Accomplishments & Notes:** Integrated calendar view and logs for shift-to-shift handovers.
-* **Role-Based Access Control (RBAC):** Admin and Supervisor control panels with restricted views for technicians.
-* **Live Operational Analytics:** Visual dashboard for open tasks, manpower availability, and system metrics.
+2. TOTAL BACKLOG CARD OVERHAUL:
 
----
+   - Redesign `TotalBacklogCard.tsx` component into an enterprise-grade metric layout.
 
-## 🏗️ Architecture & Tech Stack
+   - Completely separate chart legend, categories, and numeric counters. Fix overlapping text (such as "Average wait1 d", "Oldest job3 d", "Past SLA0").
 
-* **Frontend:** React, Vite, Tailwind CSS (via Lovable AI Studio)
-* **Backend & Database:** Supabase (PostgreSQL, Row Level Security, Authentication)
-* **Deployment & Hosting:** Vercel (Automated CI/CD Deployment)
-* **Version Control:** GitHub (`Ronanski/icmspromax`)
+   - Render each metric label on a dedicated, spacious key-value row with flex spacing: `<div className="flex justify-between items-center text-xs py-1 border-b border-border/40"><span>Label Name:</span> <span className="font-semibold text-primary">X days</span></div>`.
 
----
+This project was built with [Lovable](https://lovable.dev).
 
-## 🔒 Security & Persistence
-Data persistence is handled by Supabase with Row Level Security (RLS) policies enabled. Environment variables are managed securely through Vercel.
+## Build with Lovable
 
-*Developed & Maintained by Ronan / Automation Engineer.*
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/cbc53f49-7258-4782-9321-6636800a8cb3).
+
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+
+## Development
+
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+
+```sh
+git clone <this-repository-url>
+cd <repository-name>
+npm i
+npm run dev
+```

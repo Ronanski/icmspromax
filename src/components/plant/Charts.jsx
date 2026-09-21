@@ -83,9 +83,16 @@ export default function Charts({orders,onDrill,compact=false,defaultMetric='syst
     <section className="panel chart-panel" style={{marginTop:16}}>
       <div className="panel-heading"><div><h3>Total Backlog</h3><p>Open, in-progress and waiting-on-parts work · {stats.total} total</p></div><Layers size={17} className="muted"/></div>
       {stats.total?<>
-        <div className="backlog-factors">{factors.map(([label,value])=><div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
-        <div className="bar-chart"><ResponsiveContainer width="100%" height={200}><BarChart data={backlogData} layout="vertical" margin={{top:5,right:20,left:20,bottom:5}}><CartesianGrid horizontal={false} strokeDasharray="3 4" stroke="var(--line)"/><XAxis type="number" allowDecimals={false} tick={{fontSize:10,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false}/><YAxis type="category" dataKey="name" tick={{fontSize:11,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false} width={80}/><Tooltip cursor={{fill:'var(--hover)'}} contentStyle={{background:'var(--surface)',border:'1px solid var(--line)',borderRadius:8}}/><Bar dataKey="value" name="Backlog" radius={[0,4,4,0]} maxBarSize={28} cursor="pointer" onClick={d=>backlogDrill(d.key)}>{backlogData.map(d=><Cell key={d.key} fill={d.color}/>)}</Bar></BarChart></ResponsiveContainer></div>
-        <div className="backlog-legend">{backlogData.map(c=><button key={c.key} onClick={()=>backlogDrill(c.key)}><i style={{background:c.color}}/><span>{c.label}</span><small>{c.range}</small><strong>{c.value}</strong></button>)}</div>
+        <div className="backlog-layout">
+          <div className="backlog-chart-col">
+            <div className="bar-chart"><ResponsiveContainer width="100%" height={210}><BarChart data={backlogData} layout="vertical" margin={{top:5,right:20,left:8,bottom:5}}><CartesianGrid horizontal={false} strokeDasharray="3 4" stroke="var(--line)"/><XAxis type="number" allowDecimals={false} tick={{fontSize:10,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false}/><YAxis type="category" dataKey="name" tick={{fontSize:11,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false} width={92}/><Tooltip cursor={{fill:'var(--hover)'}} contentStyle={{background:'var(--surface)',border:'1px solid var(--line)',borderRadius:8}}/><Bar dataKey="value" name="Backlog" radius={[0,4,4,0]} maxBarSize={26} cursor="pointer" onClick={d=>backlogDrill(d.key)}>{backlogData.map(d=><Cell key={d.key} fill={d.color}/>)}</Bar></BarChart></ResponsiveContainer></div>
+            <div className="backlog-legend">{backlogData.map(c=><button key={c.key} onClick={()=>backlogDrill(c.key)}><i style={{background:c.color}}/><span>{c.label}</span><small>{c.range}</small><strong>{c.value}</strong></button>)}</div>
+          </div>
+          <div className="backlog-metrics">
+            <div className="backlog-metrics-head">Key metrics</div>
+            {factors.map(([label,value])=><div key={label} className="flex justify-between items-center text-xs py-1 border-b border-border/40"><span>{label}:</span><span className="font-semibold text-primary">{value}</span></div>)}
+          </div>
+        </div>
       </>:<div className="chart-empty"><Layers size={30}/><span>No active backlog</span><p>All work orders are completed or deferred.</p></div>}
     </section>
 
