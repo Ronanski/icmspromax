@@ -11,8 +11,8 @@ export default function WorkspaceModeSwitch({ mode, onSwitch }) {
     return () => document.removeEventListener('mousedown', h);
   }, []);
   const options = [
-    { key: 'cm', label: 'CM Workspace', icon: Wrench, badge: 'cm' },
-    { key: 'pm', label: 'Schedule PM', icon: CalendarClock, badge: 'pm' }
+    { key: 'cm', label: 'Corrective Maintenance', icon: Wrench, badge: 'cm' },
+    { key: 'pm', label: 'Preventive Maintenance', icon: CalendarClock, badge: 'pm' }
   ];
   const cur = options.find(o => o.key === mode) || options[0];
   return (

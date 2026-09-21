@@ -8,6 +8,8 @@ create table if not exists public.workspaces (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
   name text not null default 'My Plant Workspace',
+  app_name text not null default 'LPDSI Limay 1',
+  clock_format text not null default '12' check (clock_format in ('12', '24')),
   plant text default '',
   member_emails text[] default '{}',
   designation text default '',
@@ -16,6 +18,10 @@ create table if not exists public.workspaces (
   created_at timestamptz not null default now(),
   updated_date timestamptz not null default now()
 );
+
+-- Safe upgrade for workspaces created with an earlier version of this schema.
+alter table public.workspaces add column if not exists app_name text not null default 'LPDSI Limay 1';
+alter table public.workspaces add column if not exists clock_format text not null default '12';
 
 -- ----------------------------------------------------------- work orders
 create table if not exists public.work_orders (

@@ -237,6 +237,8 @@ async function plantWorkspace(payload = {}) {
         .from("workspaces")
         .update({
           name: data.name.trim().slice(0, 100),
+          app_name: String(data.app_name || "LPDSI Limay 1").trim().slice(0, 80),
+          clock_format: data.clock_format === "24" ? "24" : "12",
           plant: String(data.plant || "").slice(0, 100),
           member_emails: [...new Set((data.member_emails || []).map((e) => String(e).toLowerCase().trim()))],
           designation: String(data.designation || "").slice(0, 100),
