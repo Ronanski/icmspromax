@@ -1,6 +1,7 @@
 # ICMS Promax roadmap
 
 ## Done
+- Backlog monitoring: completed work hidden by default, chart and metric table filtering, clear filter, simplified priorities, and overdue dates
 - Editable shared app title, clean header navigation, reliable sidebar toggle, PM master-data shortcut, compact table date picker, and self-dismissing edit errors
 - Statuses extended (Pending Parts, Cancelled) across badges, filters, charts, validation
 - PM recurrence: Daily + Operating Hours, safe date parsing, duplicate-proof next-instance queueing on completion

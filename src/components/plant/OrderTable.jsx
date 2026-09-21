@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { ArrowUp, ArrowDown, ArrowUpDown, ArrowUpRight, ChevronLeft, ChevronRight, ClipboardList, Trash2, X } from 'lucide-react';
 import StatusBadge from '@/components/plant/StatusBadge';
 import DateFilterButton from '@/components/plant/DateFilterButton';
-import { aged, api, statuses, errorText, safeFormatDate, effectivePriority, priorityClass, priorityLabel } from '@/components/plant/plantUtils';
+import { aged, api, statuses, errorText, safeFormatDate, effectivePriority, priorityClass, priorityLabel, today } from '@/components/plant/plantUtils';
 import { useToast } from '@/components/ui/use-toast';
 
 const PRI_ORDER = { 'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3, 'Shutdown Item': 4 };
 
-export default function OrderTable({ orders, onOpen, title = 'Work Order Register', limited = false, workspace, admin, onRefresh }) {
+export default function OrderTable({ orders, onOpen, title = 'Work Order Register', limited = false, workspace, admin, onRefresh, activeFilter, onClearFilter }) {
   const [page, setPage] = useState(0);
   const [sort, setSort] = useState({ key: 'created', dir: 'desc' });
   const [selected, setSelected] = useState(new Set());
@@ -17,6 +17,8 @@ export default function OrderTable({ orders, onOpen, title = 'Work Order Registe
   const [dateFilter, setDateFilter] = useState({});
   const { toast } = useToast();
   const size = limited ? 5 : 10;
+  const targetDate = j => String(j.planned_finish || j.planned_start || '').slice(0, 10);
+  const isOverdue = j => Boolean(targetDate(j) && targetDate(j) < today() && j.status !== 'Completed');
 
   const sortVal = (j) => {
     const k = sort.key;
@@ -88,8 +90,8 @@ export default function OrderTable({ orders, onOpen, title = 'Work Order Registe
   return (
     <section className="panel order-panel">
       <div className="panel-heading">
-        <div className="flex items-center gap-2"><h3>{title}</h3><span className="count-badge">{orders.length}</span></div>
-        <span className="tiny-label">LIVE WORKSPACE DATA</span>
+        <div className="flex items-center gap-2"><h3>{title}</h3><span className="count-badge">{orders.length}</span>{activeFilter&&<span className="table-filter-label">{activeFilter}</span>}</div>
+        <div className="table-heading-actions">{onClearFilter&&<button type="button" className="clear-filter-button" onClick={onClearFilter}><X size={13}/>Clear Filter</button>}<span className="tiny-label">LIVE WORKSPACE DATA</span></div>
       </div>
       {admin && selected.size > 0 && (
         <div className="mass-toolbar">
@@ -133,7 +135,7 @@ export default function OrderTable({ orders, onOpen, title = 'Work Order Registe
                 <td><span className="system-tag">{j.system || 'Unassigned'}</span></td>
                 <td><span className={`priority priority-${priorityClass(j)}`}><i/>{priorityLabel(j)}</span></td>
                 <td><StatusBadge status={j.status}/>{j.status === 'Deferred' && j.deferred_reason && <div className="deferred-reason">{j.deferred_reason}{j.pr_number ? ` · PR: ${j.pr_number}` : ''}</div>}</td>
-                <td>{j.planned_finish ? (safeFormatDate(j.planned_finish, 'dd MMM yyyy') || '—') : '—'}{aged(j) > 0 && <small className="aged-label">AGED ({aged(j)}d)</small>}</td>
+                <td><span className={isOverdue(j)?'overdue-date':undefined}>{targetDate(j) ? (safeFormatDate(targetDate(j), 'dd MMM yyyy') || '—') : '—'}</span>{aged(j) > 0 && <small className="aged-label">AGED ({aged(j)}d)</small>}</td>
                 <td><span className="technician-cell">{j.technician && <i>{String(j.technician).split(',')[0].trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2)}</i>}{j.technician || 'Unassigned'}</span></td>
                 <td><ArrowUpRight size={14}/></td>
               </tr>

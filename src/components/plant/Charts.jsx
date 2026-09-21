@@ -1,6 +1,6 @@
 import React,{useState,useEffect} from 'react';
 import {BarChart,Bar,XAxis,YAxis,CartesianGrid,Tooltip,ResponsiveContainer,PieChart,Pie,Cell} from 'recharts';
-import {ArrowUpRight,BarChart3,AlertCircle,Layers,Pin,PinOff} from 'lucide-react';
+import {ArrowUpRight,BarChart3,AlertCircle,Layers,Pin,PinOff,Info} from 'lucide-react';
 import {statuses,units,aged,isBacklog,PRIORITY_COLORS,priorities,PRIORITY_LABELS,BACKLOG_CATEGORIES,backlogCategory,backlogStats} from '@/components/plant/plantUtils';
 
 const colors=['#818cf8','#38bdf8','#f97316','#34b99a','#f7bb53','#94a3b8'];
@@ -12,7 +12,7 @@ export const VOLUME_METRICS=[
   {key:'backlog',label:'Backlog by Unit'},
 ];
 
-export default function Charts({orders,onDrill,compact=false,defaultMetric='system',onDefaultMetric,supervisorMode=false}) {
+export default function Charts({orders,onDrill,onBacklogFilter,activeBacklogFilter,compact=false,defaultMetric='system',onDefaultMetric,supervisorMode=false}) {
   const [metric,setMetric]=useState(defaultMetric);
   useEffect(()=>{setMetric(defaultMetric||'system');},[defaultMetric]);
 
@@ -34,7 +34,7 @@ export default function Charts({orders,onDrill,compact=false,defaultMetric='syst
   // weighs before deciding what to push into the next shift.
   const stats=backlogStats(orders);
   const backlogData=stats.byCategory.map(c=>({...c,name:c.label}));
-  const backlogDrill=(key)=>onDrill({status:'Backlog',backlog:key});
+  const backlogDrill=(key)=>onBacklogFilter?.({type:'category',value:key,label:BACKLOG_CATEGORIES.find(c=>c.key===key)?.label||key});
   const volumeDrill=(name)=>{
     if(metric==='backlog')return onDrill({status:'Backlog',unit:name});
     if(metric==='priority')return onDrill(name==='Shutdown Item'?{status:'Backlog'}:{priority:name});
@@ -42,14 +42,14 @@ export default function Charts({orders,onDrill,compact=false,defaultMetric='syst
   };
 
   const factors=[
-    ['Average wait',`${stats.avgAge} d`],
-    ['Oldest job',`${stats.oldest} d`],
-    ['Past SLA',stats.aged],
-    ['Emergency',stats.critical],
-    ['Waiting on parts',stats.pendingParts],
-    ['Unassigned',stats.unassigned],
-    ['Break-ins',stats.breakIns],
-    ['Shutdown items',stats.shutdown],
+    ['Average wait',`${stats.avgAge} d`,null,null,'Average days a work order has been open.'],
+    ['Oldest job',`${stats.oldest} d`,'oldest',true,'The maximum number of days a single active job has been waiting.'],
+    ['Past SLA',stats.aged,'aged',true,'Number of jobs that exceeded their target date.'],
+    ['Emergency',stats.critical,'priority','Critical','High-priority urgent breakdown tasks.'],
+    ['Waiting on parts',stats.pendingParts,'status','Pending Parts','Tasks on hold waiting for spare supply.'],
+    ['Unassigned',stats.unassigned,'unassigned',true,'Jobs without a designated technician or system group.'],
+    ['Break-ins',stats.breakIns,'job_type','Break-In','Unscheduled emergency work added to the current schedule.'],
+    ['Shutdown items',stats.shutdown,'shutdown',true,'Major tasks deferred until the next facility shutdown.'],
   ];
 
   return <>
@@ -66,7 +66,7 @@ export default function Charts({orders,onDrill,compact=false,defaultMetric='syst
             </button>}
           </div>
         </div>
-        {volume.length?<div className="bar-chart"><ResponsiveContainer width="100%" height={218}><BarChart data={volume} margin={{top:15,right:8,left:-24,bottom:0}}><CartesianGrid vertical={false} strokeDasharray="3 4" stroke="var(--line)"/><XAxis dataKey="name" tick={{fontSize:10,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false} tickFormatter={n=>PRIORITY_LABELS[n]||n}/><YAxis allowDecimals={false} tick={{fontSize:10,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false}/><Tooltip cursor={{fill:'var(--hover)'}} contentStyle={{background:'var(--surface)',border:'1px solid var(--line)',borderRadius:8}}/><Bar dataKey="value" name="Work orders" radius={[4,4,0,0]} maxBarSize={34} cursor="pointer" onClick={d=>volumeDrill(d.name)}>{metric==='priority'?volume.map((d,i)=><Cell key={i} fill={priorityColors[i]}/>):<Cell fill="#7772e8"/>}</Bar></BarChart></ResponsiveContainer></div>:<div className="chart-empty"><BarChart3 size={30}/><span>Your plant data, in perspective</span><p>Work volume appears as you add work orders.</p></div>}
+        {volume.length?<div className="bar-chart"><ResponsiveContainer width="100%" height={218}><BarChart data={volume} margin={{top:15,right:8,left:-24,bottom:0}}><CartesianGrid vertical={false} strokeDasharray="3 4" stroke="var(--line)"/><XAxis dataKey="name" tick={{fontSize:10,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false} tickFormatter={n=>PRIORITY_LABELS[n]||n}/><YAxis allowDecimals={false} tick={{fontSize:10,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false}/><Tooltip cursor={{fill:'var(--hover)'}} contentStyle={{background:'var(--surface)',border:'1px solid var(--line)',borderRadius:8}}/><Bar dataKey="value" name="Work orders" radius={[4,4,0,0]} maxBarSize={34} cursor="pointer" onClick={d=>volumeDrill(d.name)}>{metric==='priority'?volume.map((d,i)=><Cell key={i} fill={priorityColors[i]}/>):volume.map((d,i)=><Cell key={i} fill={colors[i%colors.length]}/>)}</Bar></BarChart></ResponsiveContainer></div>:<div className="chart-empty"><BarChart3 size={30}/><span>Your plant data, in perspective</span><p>Work volume appears as you add work orders.</p></div>}
       </section>
       <section className="panel chart-panel">
         <div className="panel-heading"><div><h3>Status Breakdown</h3><p>Current execution overview</p></div><ArrowUpRight size={17} className="muted"/></div>
@@ -90,7 +90,7 @@ export default function Charts({orders,onDrill,compact=false,defaultMetric='syst
           </div>
           <div className="backlog-metrics">
             <div className="backlog-metrics-head">Key metrics</div>
-            {factors.map(([label,value])=><div key={label} className="flex justify-between items-center text-xs py-1 border-b border-border/40"><span>{label}:</span><span className="font-semibold text-primary">{value}</span></div>)}
+            {factors.map(([label,value,type,filterValue,desc])=>type?<button type="button" key={label} className={`backlog-metric-row ${activeBacklogFilter?.label===label?'active':''}`} onClick={()=>onBacklogFilter?.({type,value:filterValue,label})}><span className="backlog-metric-label" data-tip={desc}>{label}</span><Info size={12} className="metric-info" aria-hidden="true"/><strong>{value}</strong></button>:<div key={label} className="backlog-metric-static"><span className="backlog-metric-label" data-tip={desc}>{label}</span><Info size={12} className="metric-info" aria-hidden="true"/><strong>{value}</strong></div>)}
           </div>
         </div>
       </>:<div className="chart-empty"><Layers size={30}/><span>No active backlog</span><p>All work orders are completed or deferred.</p></div>}
