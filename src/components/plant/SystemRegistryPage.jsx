@@ -1,0 +1,34 @@
+import React,{useState} from 'react';
+import {Plus,Search,Pencil,Trash2,Network,Loader2,X,Save,UploadCloud,Download,ChevronRight,ChevronDown} from 'lucide-react';
+import {Dialog,DialogContent,DialogTitle,DialogDescription} from '@/components/ui/dialog';
+import {api,errorText,units,exportSystemsCSV,breakdownHistory,safeFormatDate} from '@/components/plant/plantUtils';
+import MasterImportDialog from '@/components/plant/MasterImportDialog';
+import {toast} from '@/components/ui/use-toast';
+export default function SystemRegistryPage({workspace,systems,orders=[],onSaved}) {
+  const [search,setSearch]=useState(''),[edit,setEdit]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [importOpen,setImportOpen]=useState(false);
+  const [open,setOpen]=useState(null);
+  const statsFor=name=>{const jobs=orders.filter(j=>(j.system||'')===name);return {total:jobs.length,active:jobs.filter(j=>j.status!=='Completed'&&j.status!=='Cancelled').length,breakdowns:breakdownHistory(orders,name)};};
+  const [sort,setSort]=useState({key:'unit',dir:'asc'});
+  const filtered0=systems.filter(s=>!search||s.system_name?.toLowerCase().includes(search.toLowerCase())||s.area?.toLowerCase().includes(search.toLowerCase())||s.unit?.toLowerCase().includes(search.toLowerCase()));
+  const filtered=[...filtered0].sort((a,b)=>{const av=String(a[sort.key]||'').toLowerCase(),bv=String(b[sort.key]||'').toLowerCase();const cmp=av<bv?-1:av>bv?1:0;return sort.dir==='asc'?cmp:-cmp;});
+  const openNew=()=>setEdit({unit:'Unit 1',system_name:'',area:''});
+  const save=async e=>{e.preventDefault();setBusy(true);setError('');try{await api('saveSystem',{workspace_id:workspace.id,id:edit.id,data:edit});await onSaved();setEdit(null);}catch(e){setError(errorText(e));}finally{setBusy(false);}};
+  const remove=async id=>{if(!confirm('Delete this system?'))return;setBusy(true);setError('');try{await api('deleteSystem',{workspace_id:workspace.id,id});await onSaved();}catch(e){setError(errorText(e));}finally{setBusy(false);}};
+  const set=(k,v)=>setEdit(p=>({...p,[k]:v}));
+  return <><div className="page-header"><div><h1>System Registry</h1><p>Plant systems and locations. Populates system dropdowns in work order and break-in forms.</p></div><div className="page-actions"><button className="secondary-button" onClick={()=>{const n=exportSystemsCSV(filtered);toast(n?{title:'System registry exported',description:`${n} system${n===1?'':'s'} downloaded.`}:{title:'Nothing to export',description:'No systems match the current search.',variant:'destructive'});}} disabled={!filtered.length}><Download size={16}/>Export CSV</button><button className="secondary-button" onClick={()=>setImportOpen(true)}><UploadCloud size={16}/>Import CSV</button><button className="primary-button" onClick={openNew}><Plus size={16}/>Add system</button></div></div>
+    <div className="master-toolbar"><label className="master-search"><Search size={16}/><input placeholder="Search by system, area or unit..." value={search} onChange={e=>setSearch(e.target.value)}/></label><span className="count-badge">{filtered.length} systems</span></div>
+    <section className="panel order-panel"><div className="table-scroll"><table className="master-table"><thead><tr>{[['unit','UNIT'],['system_name','SYSTEM NAME'],['area','AREA']].map(([k,l])=><th key={k}><button onClick={()=>setSort(p=>p.key===k?{key:k,dir:p.dir==='asc'?'desc':'asc'}:{key:k,dir:'asc'})} style={{display:'inline-flex',alignItems:'center',gap:3,background:'none',border:'none',color:'inherit',fontSize:'10px',letterSpacing:'.5px',fontWeight:700,cursor:'pointer',padding:0}}>{l}{sort.key===k?(sort.dir==='asc'?'▲':'▼'):'↕'}</button></th>)}<th></th></tr></thead><tbody>{filtered.map(s=>{const st=statsFor(s.system_name);const expanded=open===s.id;return <React.Fragment key={s.id}><tr><td><button className="icon-button" aria-label={expanded?'Hide history':'Show history'} onClick={()=>setOpen(expanded?null:s.id)} style={{marginRight:6}}>{expanded?<ChevronDown size={14}/>:<ChevronRight size={14}/>}</button><span className={`unit-tag ${s.unit==='Common'?'common':''}`}>{s.unit}</span></td><td><strong>{s.system_name}</strong><div className="muted" style={{fontSize:11}}>{st.total} work orders · {st.active} active · {st.breakdowns.length} breakdowns</div></td><td>{s.area||'—'}</td><td><div className="master-actions"><button onClick={()=>setEdit(s)}><Pencil size={14}/></button><button className="danger" onClick={()=>remove(s.id)}><Trash2 size={14}/></button></div></td></tr>
+      {expanded&&<tr className="system-detail-row"><td colSpan={4}><div className="system-detail"><h4>Breakdown &amp; maintenance history</h4>{st.breakdowns.length?<ul>{st.breakdowns.slice(0,10).map(j=><li key={j.id}><strong>{j.wo_number}</strong><span>{j.description}</span><small>{safeFormatDate(j.start_time||j.created_date||j.planned_start,'dd MMM yyyy')||'—'} · {j.equipment_tag||'No tag'} · {j.status}</small></li>)}</ul>:<p className="muted">No breakdowns logged against this system.</p>}</div></td></tr>}
+    </React.Fragment>;})}</tbody></table>{!filtered.length&&<div className="master-empty"><Network size={28}/><h3>No systems in registry</h3><p>Add plant systems to populate dropdown choices in work order forms.</p></div>}</div></section>
+    {error&&<div className="content-error"><X size={16}/>{error}</div>}
+    {edit&&<Dialog open onOpenChange={v=>!v&&!busy&&setEdit(null)}><DialogContent className="master-dialog"><DialogTitle>{edit.id?'Edit System':'Add System'}</DialogTitle><DialogDescription>Systems populate the plant system dropdown in all work order forms.</DialogDescription>
+      <form onSubmit={save}><div className="form-grid"><label className="form-field">Unit<select value={edit.unit} onChange={e=>set('unit',e.target.value)}>{units.map(u=><option key={u}>{u}</option>)}</select></label><label className="form-field">System Name<input required value={edit.system_name} onChange={e=>set('system_name',e.target.value)}/></label></div>
+      <label className="form-field mt-4">Area / Location<input placeholder="e.g., Turbine Deck, Boiler Level 2" value={edit.area} onChange={e=>set('area',e.target.value)}/></label>
+      {error&&<p className="form-error" role="alert">{error}</p>}
+      <div className="flex gap-2 mt-4 justify-end"><button type="button" className="secondary-button" disabled={busy} onClick={()=>setEdit(null)}>Cancel</button><button type="submit" className="primary-button" disabled={busy}>{busy?<Loader2 size={16} className="animate-spin"/>:<Save size={16}/>} Save system</button></div>
+      </form>
+    </DialogContent></Dialog>}
+    {importOpen&&<MasterImportDialog workspace={workspace} action="importSystems" onClose={()=>setImportOpen(false)} onSaved={onSaved}/>}
+  </>;
+}
