@@ -1085,3 +1085,5 @@
   .focus-4col-grid{grid-template-columns:1fr}
   .focus-4col-grid>.panel{min-height:300px}
 }
+
+.plant-main.sidebar-hidden{width:100%;margin-left:0}
