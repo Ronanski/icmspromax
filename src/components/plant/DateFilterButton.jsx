@@ -19,6 +19,7 @@ export default function DateFilterButton({
   presets = true,
   className = '',
   size = 'sm',
+  iconOnly = false,
 }) {
   const [open, setOpen] = useState(false);
   const hasRange = !!(value.from && value.to && value.from !== value.to);
@@ -48,13 +49,15 @@ export default function DateFilterButton({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={cn('date-pick-btn', active && 'is-active', size === 'xs' && 'xs', className)}
+          className={cn('date-pick-btn', active && 'is-active', size === 'xs' && 'xs', iconOnly && 'icon-only', className)}
           onClick={(e) => e.stopPropagation()}
           aria-label="Choose a date or date range"
+          title={active ? text : label}
         >
-          <CalendarDays size={size === 'xs' ? 11 : 14} />
-          <span>{text}</span>
-          {active && <span className="date-pick-clear" role="button" aria-label="Clear date filter" onClick={clear}><X size={11} /></span>}
+          <CalendarDays size={size === 'xs' ? 12 : 14} />
+          {!iconOnly && <span>{text}</span>}
+          {!iconOnly && active && <span className="date-pick-clear" role="button" aria-label="Clear date filter" onClick={clear}><X size={11} /></span>}
+          {iconOnly && active && <span className="date-pick-dot" />}
         </button>
       </PopoverTrigger>
       <PopoverContent className="date-pick-pop w-auto p-0 pointer-events-auto" align={align} onClick={(e) => e.stopPropagation()}>

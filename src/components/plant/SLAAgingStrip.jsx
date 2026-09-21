@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, ShieldCheck } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { aged, overdueDays, slaThreshold } from '@/components/plant/plantUtils';
 
 // One-line alert strip: active work orders that are Aged or nearing SLA breach.
@@ -15,9 +15,7 @@ export default function SLAAgingStrip({ orders, onView }) {
   });
   const total = agedJobs.length + nearing.length;
 
-  if (!total) {
-    return <div className="sla-strip ok"><ShieldCheck size={16}/><span>All active work orders are within SLA — no aging breaches detected.</span></div>;
-  }
+  if (!total) return null;
   return <button className="sla-strip warn" onClick={() => onView({ status: 'Aged' })}>
     <AlertTriangle size={16}/>
     <span><strong>{agedJobs.length} aged</strong>{nearing.length > 0 ? ` · ${nearing.length} nearing SLA breach` : ''} — review before they escalate.</span>

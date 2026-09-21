@@ -4,21 +4,22 @@ import {aged,today,lowStockItems,overduePMs,newAssignments} from '@/components/p
 
 // Notification center: critical break-ins, aged WOs, overdue/upcoming PMs,
 // low spare-part stock and freshly assigned work.
-export default function Notifications({orders=[],items=[],settings={},onOpenJob,onGoToPM,onGoToItems}) {
+export default function Notifications({orders=[],items=[],settings={},onOpenJob,onGoToPM,onGoToItems,mode='cm'}) {
   const t=today();
-  const agedJobs=orders.filter(j=>aged(j)>0).sort((a,b)=>aged(b)-aged(a));
-  const criticalBreakIns=orders.filter(j=>j.job_type==='Break-In'&&j.priority==='Critical'&&(j.status==='Open'||j.status==='In-Progress'));
-  const pmDue=orders.filter(j=>{
-    if(j.maintenance_type!=='PM')return false;
+  const cmOrders=orders.filter(j=>j.maintenance_type!=='PM');
+  const pmOrders=orders.filter(j=>j.maintenance_type==='PM');
+  const agedJobs=mode==='pm'?[]:cmOrders.filter(j=>aged(j)>0).sort((a,b)=>aged(b)-aged(a));
+  const criticalBreakIns=mode==='pm'?[]:cmOrders.filter(j=>j.job_type==='Break-In'&&j.priority==='Critical'&&(j.status==='Open'||j.status==='In-Progress'));
+  const pmDue=mode==='pm'?pmOrders.filter(j=>{
     if(['Completed','Cancelled'].includes(j.status))return false;
     const ps=j.planned_start;
     if(!ps)return false;
     const diff=Math.round((new Date(ps+'T12:00:00')-new Date(t+'T12:00:00'))/86400000);
     return diff>=0&&diff<=3;
-  });
-  const overdue=settings.notify_overdue_pm===false?[]:overduePMs(orders);
-  const lowStock=settings.notify_low_stock===false?[]:lowStockItems(items,settings.low_stock_threshold??5);
-  const assigned=settings.notify_assignments===false?[]:newAssignments(orders);
+  }):[];
+  const overdue=mode==='pm'&&settings.notify_overdue_pm!==false?overduePMs(pmOrders):[];
+  const lowStock=mode==='pm'||settings.notify_low_stock===false?[]:lowStockItems(items,settings.low_stock_threshold??5);
+  const assigned=mode==='pm'||settings.notify_assignments===false?[]:newAssignments(cmOrders);
   const total=agedJobs.length+criticalBreakIns.length+pmDue.length+overdue.length+lowStock.length+assigned.length;
   if(!total)return null;
   return <div className="notif-stack">

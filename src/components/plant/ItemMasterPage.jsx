@@ -15,8 +15,8 @@ export default function ItemMasterPage({workspace,items,onSaved}) {
   const sv=(i,k)=>k==='stock'?(Number(i.stock)||0):String(i[k]||'').toLowerCase();
   const filtered=[...filtered0].sort((a,b)=>{const av=sv(a,sort.key),bv=sv(b,sort.key);const cmp=av<bv?-1:av>bv?1:0;return sort.dir==='asc'?cmp:-cmp;});
   const openNew=()=>setEdit({code:'',description:'',bin_location:'',stock:0,unit:'',category:''});
-  const save=async e=>{e.preventDefault();setBusy(true);setError('');try{await api('saveItem',{workspace_id:workspace.id,id:edit.id,data:edit});await onSaved();setEdit(null);}catch(e){setError(errorText(e));}finally{setBusy(false);}};
-  const remove=async id=>{if(!confirm('Delete this item?'))return;setBusy(true);setError('');try{await api('deleteItem',{workspace_id:workspace.id,id});await onSaved();}catch(e){setError(errorText(e));}finally{setBusy(false);}};
+  const save=async e=>{e.preventDefault();setBusy(true);setError('');try{const updating=Boolean(edit.id);await api('saveItem',{workspace_id:workspace.id,id:edit.id,data:edit});await onSaved();setEdit(null);toast({title:updating?'Item updated':'Item added'});}catch(e){const msg=errorText(e);setError(msg);toast({title:'Save failed',description:msg,variant:'destructive'});}finally{setBusy(false);}};
+  const remove=async id=>{if(!confirm('Delete this item?'))return;setBusy(true);setError('');try{await api('deleteItem',{workspace_id:workspace.id,id});await onSaved();toast({title:'Item deleted'});}catch(e){const msg=errorText(e);setError(msg);toast({title:'Delete failed',description:msg,variant:'destructive'});}finally{setBusy(false);}};
   const toggle=id=>setSelected(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
   const allSelected=filtered.length>0&&filtered.every(i=>selected.has(i.id));
   const toggleAll=()=>{const ids=filtered.map(i=>i.id);if(ids.every(id=>selected.has(id)))setSelected(new Set([...selected].filter(id=>!ids.includes(id))));else setSelected(new Set([...selected,...ids]));};

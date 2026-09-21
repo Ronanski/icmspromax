@@ -61,7 +61,8 @@ export const pmFrequencies = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-A
 export const priorities = ['Critical', 'High', 'Medium', 'Low', 'Shutdown Item'];
 export const systems = ['Boiler', 'Turbine', 'Water Treatment', 'Fuel Handling', 'Balance of Plant'];
 export const statuses = ['Open', 'In-Progress', 'Pending Parts', 'Completed', 'Deferred', 'Cancelled'];
-export const units = ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Common'];
+export const units = ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Common', 'MH', 'WT', 'COMP', 'Phase 1', 'Phase 2'];
+export const deferReasons = ['For Shutdown', 'For Load Down Activities', 'For PR', 'Equipment Unavailability'];
 
 export const convertPriority = (raw) => {
   if (raw === null || raw === undefined || raw === '') return null;
@@ -592,22 +593,7 @@ export const breakdownHistory = (orders = [], systemName) => orders
   .sort((a, b) => String(b.start_time || b.created_date || b.planned_start || '')
     .localeCompare(String(a.start_time || a.created_date || a.planned_start || '')));
 
-/* ------------------------------------------- shift handover / audit / alerts */
-
-export const SHIFTS = ['Day', 'Night', 'Mid'];
-export const PLANT_STATUSES = ['Normal', 'Derated', 'Startup', 'Shutdown', 'Emergency'];
-
-export const exportHandoverCSV = (logs) => downloadCSV(
-  `shift-handover-${today()}.csv`,
-  ['Date', 'Shift', 'Plant Status', 'Outgoing', 'Incoming', 'Active Alerts', 'Ongoing Work', 'Pending Actions', 'Remarks', 'Acknowledged'],
-  (logs || []).filter(Boolean).map(l => [l.log_date, l.shift, l.plant_status, l.outgoing_supervisor, l.incoming_supervisor, l.active_alerts, l.ongoing_work, l.pending_actions, l.remarks, l.acknowledged ? 'Yes' : 'No']),
-);
-
-export const exportAuditCSV = (logs) => downloadCSV(
-  `audit-trail-${today()}.csv`,
-  ['Timestamp', 'User', 'Action', 'Entity', 'Reference', 'Details'],
-  (logs || []).filter(Boolean).map(l => [safeFormatDate(l.created_date, 'yyyy-MM-dd HH:mm'), l.actor_email, l.action, l.entity, l.entity_ref, l.details]),
-);
+/* ------------------------------------------------ operational alerts */
 
 // Items at or below the configured re-order threshold.
 export const lowStockItems = (items = [], threshold = 5) =>

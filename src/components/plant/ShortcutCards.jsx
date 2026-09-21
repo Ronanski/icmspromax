@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { ChartNoAxesCombined, CalendarDays, ListPlus, ClipboardList, Zap, Repeat, ClipboardSignature, AlarmClock, Layers, Plus, Package, Network, SlidersHorizontal, Check, X } from 'lucide-react';
+import { ChartNoAxesCombined, CalendarDays, ListPlus, ClipboardList, Zap, Repeat, AlarmClock, Layers, Plus, Package, Network, SlidersHorizontal } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Everything a supervisor can pin to the shortcut card.
 export const SHORTCUT_CATALOG = {
@@ -9,7 +11,6 @@ export const SHORTCUT_CATALOG = {
   orders: { icon: ClipboardList, title: 'Work Order Register', sub: 'Every corrective job in one list', tab: 'orders' },
   breakins: { icon: Zap, title: 'Break-In Hub', sub: 'Unscheduled and emergency work', tab: 'breakins' },
   pm: { icon: Repeat, title: 'Preventive Maintenance', sub: 'Recurring maintenance schedule', tab: 'pm' },
-  handover: { icon: ClipboardSignature, title: 'Shift Handover', sub: 'Write and acknowledge handovers', tab: 'handover' },
   newwo: { icon: Plus, title: 'New Work Order', sub: 'Raise a job straight away', action: 'create' },
   aged: { icon: AlarmClock, title: 'Past SLA Jobs', sub: 'Work orders beyond their priority target', filter: { status: 'Aged' } },
   backlog: { icon: Layers, title: 'Active Backlog', sub: 'Everything still waiting to be closed', filter: { status: 'Backlog' } },
@@ -42,27 +43,13 @@ export default function ShortcutCards({ onTab, onLogger, onFilter, onCreate, sho
       <div className="panel-heading">
         <h3><span className="section-indicator"/>Shortcuts</h3>
         {onChange
-          ? <button type="button" className="shortcut-config" onClick={() => setEditing(v => !v)} aria-label="Customise shortcuts">
-              {editing ? <X size={14}/> : <SlidersHorizontal size={14}/>}
-              {editing ? 'Done' : 'Customise'}
+          ? <button type="button" className="shortcut-config" onClick={() => setEditing(true)} aria-label="Customise shortcuts">
+              <SlidersHorizontal size={14}/>Customise
             </button>
           : <span className="tiny-label">QUICK ACCESS</span>}
       </div>
       <div className="panel-body">
-        {editing ? (
-          <div className="shortcut-picker">
-            <p>Pick the pages, filters and quick actions you want on this card.</p>
-            {available.map(([key, c]) => (
-              <button type="button" key={key} className={`shortcut-option${keys.includes(key) ? ' on' : ''}`} onClick={() => toggle(key)}>
-                <span className="shortcut-check">{keys.includes(key) && <Check size={12}/>}</span>
-                <c.icon size={15}/>
-                <span className="shortcut-option-copy"><strong>{c.title}</strong><small>{c.sub}</small></span>
-              </button>
-            ))}
-            <button type="button" className="shortcut-reset" onClick={() => onChange(DEFAULT_SHORTCUTS)}>Reset to the standard three</button>
-          </div>
-        ) : (
-          <div className="shortcut-stack">
+        <div className="shortcut-stack">
             {keys.length ? keys.map(key => {
               const c = SHORTCUT_CATALOG[key];
               return (
@@ -75,9 +62,20 @@ export default function ShortcutCards({ onTab, onLogger, onFilter, onCreate, sho
                 </button>
               );
             }) : <p className="shortcut-empty">No shortcuts pinned yet. Choose Customise to add some.</p>}
-          </div>
-        )}
+        </div>
       </div>
+      <Dialog open={editing} onOpenChange={setEditing}>
+        <DialogContent className="shortcut-dialog">
+          <DialogHeader><DialogTitle>Customise shortcuts</DialogTitle><DialogDescription>Choose the pages, filters, and quick actions shown on Today&apos;s Focus.</DialogDescription></DialogHeader>
+          <div className="shortcut-dialog-grid">
+            {available.map(([key, c]) => <label key={key} className={`shortcut-dialog-option${keys.includes(key)?' on':''}`}>
+              <Checkbox checked={keys.includes(key)} onCheckedChange={() => toggle(key)} aria-label={c.title}/>
+              <c.icon size={18}/><span><strong>{c.title}</strong><small>{c.sub}</small></span>
+            </label>)}
+          </div>
+          <DialogFooter><button type="button" className="secondary-button" onClick={() => onChange(DEFAULT_SHORTCUTS)}>Reset defaults</button><button type="button" className="primary-button" onClick={() => setEditing(false)}>Done</button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -29,7 +29,7 @@ const convertStatus = (raw) => {
 const YES = ["y", "yes", "true", "1", "x"];
 const bool = (raw) => YES.includes(String(raw || "").trim().toLowerCase());
 
-const UNITS = ["Unit 1", "Unit 2", "Unit 3", "Unit 4", "Common"];
+const UNITS = ["Unit 1", "Unit 2", "Unit 3", "Unit 4", "Common", "MH", "WT", "COMP", "Phase 1", "Phase 2"];
 const convertUnit = (raw) => {
   const s = cleanCell(raw);
   if (!s) return "";
@@ -55,7 +55,7 @@ const convertFrequency = (raw) => {
   return "";
 };
 
-const DEFER_REASONS = ["For Shutdown", "For Load Down Activities", "For PR"];
+const DEFER_REASONS = ["For Shutdown", "For Load Down Activities", "For PR", "Equipment Unavailability"];
 const convertDeferReason = (raw) => {
   const s = cleanCell(raw);
   if (!s) return "";
@@ -64,6 +64,7 @@ const convertDeferReason = (raw) => {
   if (/shutdown/i.test(s)) return "For Shutdown";
   if (/load/i.test(s)) return "For Load Down Activities";
   if (/\bpr\b|purchase/i.test(s)) return "For PR";
+  if (/equipment.*unavail|unavail.*equipment/i.test(s)) return "Equipment Unavailability";
   return "";
 };
 

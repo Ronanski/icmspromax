@@ -17,6 +17,7 @@ export default function MasterImportDialog({workspace,action,onClose,onSaved}) {
       const res=await api(action,{workspace_id:workspace.id,rows});
       setResult(res);
       await onSaved();
+      toast({title:'Import complete',description:`${res.created||0} created · ${res.updated||0} updated`});
     }catch(e){
       const msg=errorText(e);
       setError(msg);

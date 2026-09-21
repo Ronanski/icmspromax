@@ -1,4 +1,4 @@
-// Real backend for the I&C Plant Desk, backed by Supabase (Postgres + Auth).
+// Persistent data layer for ICMS ProMax.
 //
 // It keeps the exact same interface the UI already uses
 // (`db.auth.*`, `db.entities.*`, `db.functions.invoke`), so every screen keeps
@@ -15,8 +15,6 @@ const TABLES = {
   ItemMaster: "item_master",
   SupervisorTodo: "supervisor_todos",
   SupervisorDailyLog: "supervisor_daily_logs",
-  ShiftHandover: "shift_handover_logs",
-  AuditLog: "audit_logs",
   AlertSetting: "alert_settings",
 };
 
@@ -118,7 +116,7 @@ const ORDER_FIELDS = [
   "as_found","as_left","start_time","completion_time","materials","ptw_number","ex_breakin",
   "associated_wo","deferred_reason","pr_number",
 ];
-const UNITS = ["Unit 1", "Unit 2", "Unit 3", "Unit 4", "Common"];
+const UNITS = ["Unit 1", "Unit 2", "Unit 3", "Unit 4", "Common", "MH", "WT", "COMP", "Phase 1", "Phase 2"];
 const STATUSES = ["Open", "In-Progress", "Pending Parts", "Completed", "Deferred", "Cancelled"];
 const PM_FREQUENCIES = ["Daily", "Weekly", "Monthly", "Quarterly", "Semi-Annual", "Annual", "Operating Hours"];
 
@@ -136,7 +134,7 @@ const clean = (input = {}) => {
   if (out.status && !STATUSES.includes(out.status)) throw Error("Invalid status");
   if (out.maintenance_type && !["CM", "PM"].includes(out.maintenance_type)) throw Error("Invalid maintenance type");
   if (out.pm_frequency && !PM_FREQUENCIES.includes(out.pm_frequency)) throw Error("Invalid PM frequency");
-  if (out.deferred_reason && !["For Shutdown","For Load Down Activities","For PR"].includes(out.deferred_reason)) throw Error("Invalid deferred reason");
+  if (out.deferred_reason && !["For Shutdown","For Load Down Activities","For PR","Equipment Unavailability"].includes(out.deferred_reason)) throw Error("Invalid deferred reason");
   if (out.priority && !["Critical","High","Medium","Low"].includes(out.priority)) throw Error("Invalid priority");
   if (out.job_type && !["Scheduled","Break-In"].includes(out.job_type)) throw Error("Invalid job type");
   if (out.unit && !UNITS.includes(out.unit)) throw Error("Invalid unit");
@@ -190,25 +188,6 @@ const nextPMDate = (freq, base) => {
   // so the job stays visible until runtime data says otherwise.
   if (freq === "Operating Hours") return fmt(new Date(d.getTime() + 30 * 86400000));
   return "";
-};
-
-// Append-only audit trail for administrative actions. Never blocks the action
-// itself: if the audit table is missing the app keeps working.
-const recordAudit = async (scope, user, action, entity, entity_ref, details) => {
-  try {
-    await supabase.from("audit_logs").insert({
-      ...scope,
-      actor_email: user?.email || "",
-      action: String(action).slice(0, 80),
-      entity: String(entity).slice(0, 80),
-      entity_ref: String(entity_ref ?? "").slice(0, 200),
-      details: String(details ?? "").slice(0, 1000),
-      created_date: nowISO(),
-      updated_date: nowISO(),
-    });
-  } catch {
-    /* audit is best-effort */
-  }
 };
 
 /* ------------------------------------------------- workspace operations */
@@ -292,7 +271,6 @@ async function plantWorkspace(payload = {}) {
         .select()
         .single();
       fail(error);
-      await recordAudit(scope, user, "Settings updated", "Workspace", saved.name, `Plant: ${saved.plant || "—"} · Members: ${(saved.member_emails || []).length}`);
       return saved;
     }
 
@@ -325,7 +303,6 @@ async function plantWorkspace(payload = {}) {
     case "clearData": {
       const { error } = await supabase.from("work_orders").delete().eq("workspace_id", ws.id);
       fail(error);
-      await recordAudit(scope, user, "All work orders cleared", "Work Order", "ALL", "Workspace data reset");
       return { deleted: true };
     }
 
@@ -360,7 +337,6 @@ async function plantWorkspace(payload = {}) {
       const { data: removed, error } = await supabase
         .from("work_orders").delete().eq("workspace_id", ws.id).in("id", ids).select("id");
       fail(error);
-      await recordAudit(scope, user, "Work orders deleted", "Work Order", `${(removed || []).length} records`, ids.join(", "));
       return { deleted: (removed || []).length };
     }
 
@@ -369,7 +345,6 @@ async function plantWorkspace(payload = {}) {
       const { data: removed, error } = await supabase
         .from("item_master").delete().eq("workspace_id", ws.id).in("id", ids).select("id");
       fail(error);
-      await recordAudit(scope, user, "Items deleted", "Item Master", `${(removed || []).length} records`, ids.join(", "));
       return { deleted: (removed || []).length };
     }
 
@@ -377,7 +352,6 @@ async function plantWorkspace(payload = {}) {
       const { data: removed, error } = await supabase
         .from("item_master").delete().eq("workspace_id", ws.id).select("id");
       fail(error);
-      await recordAudit(scope, user, "Item master cleared", "Item Master", "ALL", `${(removed || []).length} records removed`);
       return { deleted: true, count: (removed || []).length };
     }
 
@@ -399,10 +373,8 @@ async function plantWorkspace(payload = {}) {
     }
 
     case "deleteSystem": {
-      const { data: before } = await supabase.from("system_registry").select("unit, system_name").eq("id", id).maybeSingle();
       const { error } = await supabase.from("system_registry").delete().eq("id", id);
       fail(error);
-      await recordAudit(scope, user, "System deleted", "System Registry", before?.system_name || id, before?.unit || "");
       return { deleted: true };
     }
 
@@ -435,10 +407,8 @@ async function plantWorkspace(payload = {}) {
     }
 
     case "deleteItem": {
-      const { data: before } = await supabase.from("item_master").select("code, description").eq("id", id).maybeSingle();
       const { error } = await supabase.from("item_master").delete().eq("id", id);
       fail(error);
-      await recordAudit(scope, user, "Item deleted", "Item Master", before?.code || id, before?.description || "");
       return { deleted: true };
     }
 
@@ -567,10 +537,8 @@ async function plantWorkspace(payload = {}) {
     }
 
     case "delete": {
-      const { data: before } = await supabase.from("work_orders").select("wo_number, description").eq("id", id).maybeSingle();
       const { error } = await supabase.from("work_orders").delete().eq("id", id);
       fail(error);
-      await recordAudit(scope, user, "Work order deleted", "Work Order", before?.wo_number || id, before?.description || "");
       return { deleted: true };
     }
 

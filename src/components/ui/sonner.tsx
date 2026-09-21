@@ -2,15 +2,16 @@ import { Toaster as Sonner } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
-// Minimalist, self-dismissing notifications used across the Plant Desk.
+// Compact, self-dismissing Fluent-style notifications used across ICMS ProMax.
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
       position="bottom-right"
-      duration={2600}
-      gap={8}
-      visibleToasts={3}
+      duration={3200}
+      gap={6}
+      visibleToasts={4}
+      closeButton
       toastOptions={{
         classNames: {
           toast: "plant-toast",

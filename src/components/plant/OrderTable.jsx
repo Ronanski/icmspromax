@@ -61,7 +61,8 @@ export default function OrderTable({ orders, onOpen, title = 'Work Order Registe
     setBusy(true); setError('');
     try {
       await api('massUpdate', { workspace_id: workspace.id, ids: [...selected], status: massAction });
-      setSelected(new Set()); setMassAction(''); await onRefresh();
+      const count=selected.size;setSelected(new Set()); setMassAction(''); await onRefresh();
+      toast({title:'Work orders updated',description:`${count} record${count===1?'':'s'} changed to ${massAction}.`});
     } catch (e) { const msg = errorText(e); toast({ title: 'Update failed', description: msg, variant: 'destructive' }); }
     finally { setBusy(false); }
   };
@@ -70,7 +71,8 @@ export default function OrderTable({ orders, onOpen, title = 'Work Order Registe
     setBusy(true); setError('');
     try {
       await api('massDelete', { workspace_id: workspace.id, ids: [...selected] });
-      setSelected(new Set()); await onRefresh();
+      const count=selected.size;setSelected(new Set()); await onRefresh();
+      toast({title:'Work orders deleted',description:`${count} record${count===1?'':'s'} removed.`});
     } catch (e) { const msg = errorText(e); toast({ title: 'Delete failed', description: msg, variant: 'destructive' }); }
     finally { setBusy(false); }
   };
@@ -110,10 +112,12 @@ export default function OrderTable({ orders, onOpen, title = 'Work Order Registe
               <Th k="priority" label="PRIORITY"/>
               <Th k="status" label="STATUS"/>
               <th>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <button onClick={() => toggleSort('target')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'inherit', fontSize: '10px', letterSpacing: '.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
                   TARGET DATE{sort.key === 'target' ? (sort.dir === 'asc' ? <ArrowUp size={11}/> : <ArrowDown size={11}/>) : <ArrowUpDown size={11} style={{ opacity: .4 }}/>}
                 </button>
-                <DateFilterButton value={dateFilter} onChange={value => { setDateFilter(value); setPage(0); }} label="Target date" align="end" size="xs" className="table-date-button" />
+                <DateFilterButton value={dateFilter} onChange={value => { setDateFilter(value); setPage(0); }} label="Filter by target date" align="end" size="xs" iconOnly className="table-date-button" />
+                </span>
               </th>
               <Th k="manpower" label="MANPOWER"/>
               <th/>

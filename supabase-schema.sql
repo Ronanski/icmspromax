@@ -158,45 +158,12 @@ begin
 end $$;
 
 -- =====================================================================
--- ICMS Promax — Stage 2 tables: Shift Handover, Audit Trail, Alerts
--- Re-runnable: safe to paste over an existing database.
+-- ICMS ProMax — operational alert settings
+-- The retired handover and audit modules are removed when this script runs.
 -- =====================================================================
 
--- ---------------------------------------------------- shift handover log
-create table if not exists public.shift_handover_logs (
-  id uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references public.workspaces(id) on delete cascade,
-  owner_id uuid not null references auth.users(id) on delete cascade,
-  log_date text not null,
-  shift text not null default 'Day',
-  outgoing_supervisor text default '',
-  incoming_supervisor text default '',
-  plant_status text default 'Normal',
-  active_alerts text default '',
-  ongoing_work text default '',
-  pending_actions text default '',
-  remarks text default '',
-  acknowledged boolean not null default false,
-  acknowledged_at timestamptz,
-  created_date timestamptz not null default now(),
-  updated_date timestamptz not null default now()
-);
-create index if not exists shift_handover_workspace_idx on public.shift_handover_logs(workspace_id, log_date desc);
-
--- ------------------------------------------------------------ audit trail
-create table if not exists public.audit_logs (
-  id uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references public.workspaces(id) on delete cascade,
-  owner_id uuid not null references auth.users(id) on delete cascade,
-  actor_email text default '',
-  action text not null,
-  entity text not null,
-  entity_ref text default '',
-  details text default '',
-  created_date timestamptz not null default now(),
-  updated_date timestamptz not null default now()
-);
-create index if not exists audit_logs_workspace_idx on public.audit_logs(workspace_id, created_date desc);
+drop table if exists public.shift_handover_logs cascade;
+drop table if exists public.audit_logs cascade;
 
 -- ------------------------------------------------- notification settings
 create table if not exists public.alert_settings (
@@ -214,22 +181,16 @@ create table if not exists public.alert_settings (
 create unique index if not exists alert_settings_workspace_idx on public.alert_settings(workspace_id);
 
 -- ------------------------------------------------------ grants + security
-grant select, insert, update, delete on public.shift_handover_logs to authenticated;
-grant select, insert on public.audit_logs to authenticated;          -- audit rows are append-only
 grant select, insert, update, delete on public.alert_settings to authenticated;
 
-grant all on public.shift_handover_logs to service_role;
-grant all on public.audit_logs to service_role;
 grant all on public.alert_settings to service_role;
 
-alter table public.shift_handover_logs enable row level security;
-alter table public.audit_logs enable row level security;
 alter table public.alert_settings enable row level security;
 
 do $$
 declare t text;
 begin
-  foreach t in array array['shift_handover_logs','alert_settings'] loop
+  foreach t in array array['alert_settings'] loop
     execute format('drop policy if exists "owner_select" on public.%I', t);
     execute format('drop policy if exists "owner_insert" on public.%I', t);
     execute format('drop policy if exists "owner_update" on public.%I', t);
@@ -241,11 +202,3 @@ begin
   end loop;
 end $$;
 
--- Audit trail: readable and appendable by the workspace owner, never editable
--- or deletable by anyone through the API.
-drop policy if exists "owner_select" on public.audit_logs;
-drop policy if exists "owner_insert" on public.audit_logs;
-drop policy if exists "owner_update" on public.audit_logs;
-drop policy if exists "owner_delete" on public.audit_logs;
-create policy "owner_select" on public.audit_logs for select to authenticated using (auth.uid() = owner_id);
-create policy "owner_insert" on public.audit_logs for insert to authenticated with check (auth.uid() = owner_id);

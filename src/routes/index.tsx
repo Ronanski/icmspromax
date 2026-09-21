@@ -11,13 +11,13 @@ const AuthPage = lazy(() => import("@/pages/AuthPage.jsx"));
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "I&C Plant Desk | Maintenance Work Order Control" },
+      { title: "ICMS ProMax | Maintenance Operations" },
       {
         name: "description",
         content:
           "Plant instrumentation and control maintenance desk: work orders, break-in hub, preventive maintenance schedule, item master and shift analytics.",
       },
-      { property: "og:title", content: "I&C Plant Desk | Maintenance Work Order Control" },
+      { property: "og:title", content: "ICMS ProMax | Maintenance Operations" },
       {
         property: "og:description",
         content:

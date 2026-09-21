@@ -47,7 +47,8 @@ export default function AuthPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg">
         <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold text-foreground">I&amp;C Plant Desk</h1>
+          <div className="auth-brand-mark"><img src="/favicon.svg" alt=""/></div>
+          <h1 className="text-xl font-semibold text-foreground">ICMS ProMax</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === 'login' ? 'Sign in to your maintenance desk' : 'Create your maintenance desk account'}
           </p>

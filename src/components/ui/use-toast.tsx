@@ -7,7 +7,7 @@ type ToastInput = {
   duration?: number;
 };
 
-// Minimalist toasts: one short line, auto-dismissing, never stacking up.
+// One notification path for successful actions, warnings, and errors.
 export function toast({ title, description, variant, duration }: ToastInput) {
   const message = title ?? description ?? "";
   const id = `${variant === "destructive" ? "err" : "ok"}:${message}`;
