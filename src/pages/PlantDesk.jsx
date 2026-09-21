@@ -34,13 +34,13 @@ const titles={focus:"Today's Focus",orders:'Work Orders',breakins:'Break-In Hub'
 
 export default function PlantDesk(){
   const ws=usePlantWorkspace();
-  const [tab,setTab]=useState('focus'),[dark,setDark]=useState(()=>{try{return localStorage.getItem('plant-theme')!=='light';}catch{return true;}}),[sidebarOpen,setSidebarOpen]=useState(false),[workspaceMode,setWorkspaceMode]=useState('cm'),[pmDateFrom,setPmDateFrom]=useState(''),[pmDateTo,setPmDateTo]=useState('');
+  const [tab,setTab]=useState('focus'),[dark,setDark]=useState(()=>{try{return localStorage.getItem('plant-theme')!=='light';}catch{return true;}}),[sidebarOpen,setSidebarOpen]=useState(()=>window.innerWidth>768),[workspaceMode,setWorkspaceMode]=useState('cm'),[pmDateFrom,setPmDateFrom]=useState(''),[pmDateTo,setPmDateTo]=useState('');
   const [filters,setFilters]=useState({}),[search,setSearch]=useState('');
   const [analyticsFilters,setAnalyticsFilters]=useState({});
   const [period,setPeriod]=useState('This Month'),[range,setRange]=useState(rangeFor('This Month'));
   const [drawerJob,setDrawerJob]=useState(null),[importOpen,setImportOpen]=useState(false),[importMode,setImportMode]=useState('scheduled'),[profileOpen,setProfileOpen]=useState(false),[loggerOpen,setLoggerOpen]=useState(false),[summaryOpen,setSummaryOpen]=useState(false),[breakInDate,setBreakInDate]=useState(''),[calendarDate,setCalendarDate]=useState(null),[summaryDate,setSummaryDate]=useState('');
 
-  useEffect(()=>{document.title=`${titles[tab]||'Plant Desk'} | I&C Plant Desk`;},[tab]);
+  useEffect(()=>{document.title=`${titles[tab]||'Plant Desk'} | ${ws.workspace?.app_name||'LPDSI Limay 1'}`;},[tab,ws.workspace?.app_name]);
   useEffect(()=>{document.documentElement.classList.toggle('dark',dark);try{localStorage.setItem('plant-theme',dark?'dark':'light');}catch{}},[dark]);
 
   // Strict workspace isolation: CM workspace never sees PM records.
@@ -88,8 +88,8 @@ export default function PlantDesk(){
 
   return <div className="plant-shell">
     <Sidebar tab={tab} onTab={setTab} workspaces={ws.workspaces} workspace={ws.workspace} onWorkspace={ws.chooseWorkspace} user={ws.user} admin={ws.admin} open={sidebarOpen} onClose={()=>setSidebarOpen(false)} count={cmOrders.length} pmCount={pmOrders.length} onProfile={ws.admin?()=>setProfileOpen(true):undefined} profileName={ws.profileName} workspaceMode={workspaceMode} onSwitchMode={m=>{setWorkspaceMode(m);setFilters({});setTab(m==='pm'?'pmfocus':'focus');}}/>
-    <div className="plant-main">
-      <Topbar title={titles[tab]} onMenu={()=>setSidebarOpen(true)} dark={dark} onDark={()=>setDark(!dark)} search={search} onSearch={setSearch} onTab={setTab} workspaceMode={workspaceMode} onSwitchMode={m=>{setWorkspaceMode(m);setFilters({});setTab(m==='pm'?'pmfocus':'focus');}}/>
+    <div className={`plant-main ${sidebarOpen?'':'sidebar-hidden'}`}>
+      <Topbar title={titles[tab]} onMenu={()=>setSidebarOpen(v=>!v)} dark={dark} onDark={()=>setDark(!dark)} search={search} onSearch={setSearch} onTab={setTab} clockFormat={ws.workspace?.clock_format||'12'}/>
       <div className="plant-content">
         {ws.error&&<div className="content-error"><AlertCircle size={16}/>{ws.error}</div>}
         {tab==='focus'&&<><div className="page-header"><div><h1>{greetingText()}</h1><p>{subtitle}</p></div><div className="page-actions">{ws.admin&&<button className="secondary-button" onClick={()=>setSummaryOpen(true)}><FileText size={16}/>Shift Summary</button>}<button className="secondary-button" onClick={()=>openImport('scheduled')}><UploadCloud size={16}/>Import</button><button className="primary-button" onClick={()=>createJob('Scheduled')}><Plus size={16}/>Add work order</button></div></div><FocusCards orders={cmOrders} onOpen={openDrawer} onCreate={createJob} onView={f=>{setFilters(f);setTab('orders');}}/><SLAAgingStrip orders={cmOrders} onView={f=>{setFilters(f);setTab('orders');}}/><div className="focus-4col-grid"><TodayBreakInList orders={cmOrders} onOpen={openDrawer}/><ShortcutCards onTab={setTab} onLogger={()=>setLoggerOpen(true)}/><ManpowerAssignment orders={cmOrders} onOpen={openDrawer}/><MiniCalendar workspace={ws.workspace}/></div></>}

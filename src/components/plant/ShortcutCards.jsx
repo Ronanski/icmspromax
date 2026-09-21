@@ -19,7 +19,7 @@ export default function ShortcutCards({ onTab, onLogger }) {
           {cards.map(c => (
             <button key={c.title} className="panel nav-card" onClick={c.onClick}>
               <c.icon size={22}/>
-              <div>
+              <div className="shortcut-copy">
                 <strong>{c.title}</strong>
                 <span>{c.sub}</span>
               </div>
