@@ -1,6 +1,9 @@
 # ICMS Promax roadmap
 
 ## Done
+- Paginated every shared work-order table with current and total page labels
+- Limited the notification bell to Today's Focus, strictly separated corrective and preventive alerts, improved dark-mode readability, and added per-item/all unread controls
+- Removed the center information icons from the backlog key-metrics list
 - Backlog monitoring: completed work hidden by default, chart and metric table filtering, clear filter, simplified priorities, and overdue dates
 - Editable shared app title, clean header navigation, reliable sidebar toggle, PM master-data shortcut, compact table date picker, and self-dismissing edit errors
 - Statuses extended (Pending Parts, Cancelled) across badges, filters, charts, validation

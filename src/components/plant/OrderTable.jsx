@@ -46,7 +46,8 @@ export default function OrderTable({ orders, onOpen, title = 'Work Order Registe
       })
     : sorted;
   const total = dateFiltered.length;
-  const current = Math.min(page, Math.max(0, Math.ceil(total / size) - 1));
+  const pageCount = Math.max(1, Math.ceil(total / size));
+  const current = Math.min(page, pageCount - 1);
   const rows = dateFiltered.slice(current * size, current * size + size);
 
   const toggleSort = (k) => setSort(p => p.key === k ? { key: k, dir: p.dir === 'asc' ? 'desc' : 'asc' } : { key: k, dir: 'asc' });
@@ -148,7 +149,7 @@ export default function OrderTable({ orders, onOpen, title = 'Work Order Registe
         <span>{total ? `Showing ${current * size + 1}–${Math.min((current + 1) * size, total)} of ${total} work orders${dateFilter.from ? ' (date-filtered)' : ''}` : '0 work orders'}</span>
         <div>
           <button aria-label="Previous page" disabled={!current} onClick={() => setPage(current - 1)}><ChevronLeft size={14}/></button>
-          <span>Page {current + 1}</span>
+          <span className="page-position">Page {current + 1} of {pageCount}</span>
           <button aria-label="Next page" disabled={(current + 1) * size >= total} onClick={() => setPage(current + 1)}><ChevronRight size={14}/></button>
         </div>
       </div>

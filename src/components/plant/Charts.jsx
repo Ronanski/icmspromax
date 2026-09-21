@@ -1,6 +1,6 @@
 import React,{useState,useEffect} from 'react';
 import {BarChart,Bar,XAxis,YAxis,CartesianGrid,Tooltip,ResponsiveContainer,PieChart,Pie,Cell} from 'recharts';
-import {ArrowUpRight,BarChart3,AlertCircle,Layers,Pin,PinOff,Info} from 'lucide-react';
+import {ArrowUpRight,BarChart3,AlertCircle,Layers,Pin,PinOff} from 'lucide-react';
 import {statuses,units,aged,isBacklog,PRIORITY_COLORS,priorities,PRIORITY_LABELS,BACKLOG_CATEGORIES,backlogCategory,backlogStats} from '@/components/plant/plantUtils';
 
 const colors=['#818cf8','#38bdf8','#f97316','#34b99a','#f7bb53','#94a3b8'];
@@ -90,7 +90,7 @@ export default function Charts({orders,onDrill,onBacklogFilter,activeBacklogFilt
           </div>
           <div className="backlog-metrics">
             <div className="backlog-metrics-head">Key metrics</div>
-            {factors.map(([label,value,type,filterValue,desc])=>type?<button type="button" key={label} className={`backlog-metric-row ${activeBacklogFilter?.label===label?'active':''}`} onClick={()=>onBacklogFilter?.({type,value:filterValue,label})}><span className="backlog-metric-label" data-tip={desc}>{label}</span><Info size={12} className="metric-info" aria-hidden="true"/><strong>{value}</strong></button>:<div key={label} className="backlog-metric-static"><span className="backlog-metric-label" data-tip={desc}>{label}</span><Info size={12} className="metric-info" aria-hidden="true"/><strong>{value}</strong></div>)}
+            {factors.map(([label,value,type,filterValue])=>type?<button type="button" key={label} className={`backlog-metric-row ${activeBacklogFilter?.label===label?'active':''}`} onClick={()=>onBacklogFilter?.({type,value:filterValue,label})}><span className="backlog-metric-label">{label}</span><strong>{value}</strong></button>:<div key={label} className="backlog-metric-static"><span className="backlog-metric-label">{label}</span><strong>{value}</strong></div>)}
           </div>
         </div>
       </>:<div className="chart-empty"><Layers size={30}/><span>No active backlog</span><p>All work orders are completed or deferred.</p></div>}
