@@ -1,24 +1,29 @@
-# Project Reboot
+# 🛠️ I&C Operations and Maintenance Control System (ICMS ProMax)
 
-Hindi ako developer. Ito ang buong zip file ng code ng aking app na in-export ko mula sa Base44 gamit ang isang downloader extension. Gusto kong ilipat at ituloy ang project na ito dito sa Lovable. Paki-linis ang code na ito: tanggalin mo ang lahat ng Base44 SDK at mga koneksyon na nakatali sa server nila (gaya ng base44Client.js, base44.auth, at mga imports nito). Palitan mo ito ng standard na React at Vite code. HUWAG mo muna itong ikakabit sa kahit anong totoong database, gumamit ka lang muna ng mock/sample data para gumana nang maayos ang buong frontend layout at ang mga buttons.
+Welcome to the **Instrumentation & Control (I&C) Operations and Maintenance Control System** — a web application engineered for streamlined plant operations management, manpower roster tracking, and work order coordination.
 
-This project was built with [Lovable](https://lovable.dev).
+---
 
-## Build with Lovable
+## 🚀 Key Features
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/f9640a4a-72fd-4d60-ab4d-77a38c8c970c).
+* **Work Order Management:** Centralized creation, tracking, status updating, and archive management for plant work orders.
+* **Manpower Master Data Hub:** Personnel roster management, shift schedules, skill tagging, and duty status tracking.
+* **Daily Shift Accomplishments & Notes:** Integrated calendar view and logs for shift-to-shift handovers.
+* **Role-Based Access Control (RBAC):** Admin and Supervisor control panels with restricted views for technicians.
+* **Live Operational Analytics:** Visual dashboard for open tasks, manpower availability, and system metrics.
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+---
 
-## Development
+## 🏗️ Architecture & Tech Stack
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+* **Frontend:** React, Vite, Tailwind CSS (via Lovable AI Studio)
+* **Backend & Database:** Supabase (PostgreSQL, Row Level Security, Authentication)
+* **Deployment & Hosting:** Vercel (Automated CI/CD Deployment)
+* **Version Control:** GitHub (`Ronanski/icmspromax`)
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
+---
+
+## 🔒 Security & Persistence
+Data persistence is handled by Supabase with Row Level Security (RLS) policies enabled. Environment variables are managed securely through Vercel.
+
+*Developed & Maintained by Ronan / Automation Engineer.*
