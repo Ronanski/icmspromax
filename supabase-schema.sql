@@ -22,6 +22,9 @@ create table if not exists public.workspaces (
 -- Safe upgrade for workspaces created with an earlier version of this schema.
 alter table public.workspaces add column if not exists app_name text not null default 'LPDSI Limay 1';
 alter table public.workspaces add column if not exists clock_format text not null default '12';
+-- Web app preferences (shortcut cards, analytics metrics, default views) so a
+-- user's setup follows them across sessions and devices.
+alter table public.workspaces add column if not exists prefs jsonb not null default '{}'::jsonb;
 
 -- ----------------------------------------------------------- work orders
 create table if not exists public.work_orders (
@@ -99,6 +102,9 @@ create table if not exists public.supervisor_todos (
   updated_date timestamptz not null default now()
 );
 create index if not exists supervisor_todos_workspace_idx on public.supervisor_todos(workspace_id);
+-- Date-scoped to-do entries with quick remarks.
+alter table public.supervisor_todos add column if not exists due_date text default '';
+alter table public.supervisor_todos add column if not exists remarks text default '';
 
 -- -------------------------------------------------- supervisor daily logs
 create table if not exists public.supervisor_daily_logs (
