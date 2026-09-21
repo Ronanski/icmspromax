@@ -365,6 +365,27 @@
 .kpi-bottom.amber{background:var(--amber)}
 .kpi-divider{color:var(--muted-ink);margin:0 2px;font-weight:400}
 
+/* Metric picker & PM/CM ratio controls */
+.metric-bar{margin-bottom:16px}
+.metric-picker{position:relative}
+.metric-trigger{display:inline-flex;align-items:center;gap:8px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:400;cursor:pointer;outline:none;transition:background .15s}
+.metric-trigger:hover{background:var(--hover)}
+.metric-chevron{margin-left:auto;color:var(--muted-ink)}
+.metric-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:280px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);z-index:40;padding:8px;display:flex;flex-direction:column;gap:2px}
+.metric-menu-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px 6px;font-size:12px;font-weight:700;color:var(--muted-ink);border-bottom:1px solid var(--line);margin-bottom:4px}
+.metric-menu-head button{background:none;border:none;color:var(--muted-ink);cursor:pointer;padding:2px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:all .15s}
+.metric-menu-head button:hover{background:var(--hover);color:var(--ink)}
+.metric-option{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 10px;border-radius:8px;border:none;background:none;color:var(--ink);font-size:12px;font-weight:500;cursor:pointer;transition:background .15s}
+.metric-option:hover{background:var(--hover)}
+.metric-option.on{background:var(--violet-soft);color:var(--violet)}
+.metric-check{width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--line);color:var(--violet);flex-shrink:0}
+.metric-option.on .metric-check{background:var(--violet);border-color:var(--violet);color:#fff}
+.metric-option-icon{color:var(--muted-ink);flex-shrink:0}
+.metric-option.on .metric-option-icon{color:var(--violet)}
+.metric-option-label{flex:1}
+.metric-reset{margin-top:6px;padding:10px;text-align:center;font-size:12px;font-weight:600;color:var(--violet);background:none;border:none;border-top:1px solid var(--line);cursor:pointer;border-radius:6px;transition:background .15s}
+.metric-reset:hover{background:var(--hover)}
+
 /* Charts */
 .charts-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:20px}
 .chart-panel .bar-chart{margin-top:4px}
@@ -697,7 +718,10 @@
 
 /* ===== Analytics Metric Selector ===== */
 .metric-selector{display:flex;align-items:center;gap:8px}
-.metric-selector select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;outline:none}
+.metric-selector select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;outline:none}
+.pin-default{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink-2);cursor:pointer;transition:all .15s}
+.pin-default:hover{background:var(--hover);color:var(--violet)}
+.pin-default[aria-pressed="true"]{background:var(--violet-soft);color:var(--violet);border-color:var(--violet)}
 
 /* ===== Deferred Badge ===== */
 .deferred-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:#fef3c7;color:#b45309}
@@ -1169,6 +1193,20 @@
 .backlog-cat strong{font-size:22px;line-height:1.1;color:var(--ink)}
 .backlog-cat span{font-size:11.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--muted-ink)}
 .backlog-cat small{font-size:10.5px;color:var(--muted-ink);line-height:1.35}
+/* Total Backlog enterprise layout — chart, legend, and key metrics kept separate */
+.backlog-layout{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start}
+.backlog-chart-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.backlog-legend{display:flex;flex-wrap:wrap;gap:8px}
+.backlog-legend button{display:inline-flex;align-items:center;gap:7px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;text-align:left;transition:background .15s}
+.backlog-legend button:hover{background:var(--hover)}
+.backlog-legend i{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.backlog-legend span{font-size:11.5px;color:var(--ink);font-weight:600}
+.backlog-legend small{font-size:10px;color:var(--muted-ink)}
+.backlog-legend strong{font-size:12.5px;color:var(--ink);margin-left:2px}
+.backlog-metrics{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.backlog-metrics-head{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted-ink);padding-bottom:6px;margin-bottom:2px;border-bottom:1px solid var(--line)}
+.backlog-metrics .border-b:last-child{border-bottom:none}
+@media(max-width:860px){.backlog-layout{grid-template-columns:1fr}}
 .analytics-settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
 .metric-toggle{display:flex;gap:9px;align-items:flex-start;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:10px 11px;cursor:pointer}
 .metric-toggle input{margin-top:2px;width:15px;height:15px}
