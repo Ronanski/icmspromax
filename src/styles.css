@@ -196,7 +196,7 @@
 .global-search kbd{font-size:14px;color:var(--muted-ink)}
 .icon-button{display:flex;align-items:center;justify-content:center;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;color:var(--ink-2);transition:all .15s}
 .icon-button:hover{background:var(--hover)}
-.topbar-divider{width:1px;height:24px;background:var(--line)}.topbar-clock{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}.topbar-clock svg{color:var(--violet)}
+.topbar-divider{width:1px;height:24px;background:var(--line)}.topbar-clock{display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;font-size:12px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}.topbar-clock svg{color:var(--violet);flex-shrink:0}
 
 /* Content */
 .plant-content{padding:24px;max-width:1400px;width:100%;margin:0 auto;flex:1}
@@ -918,16 +918,16 @@
 
 /* ===== Sidebar Mode Dropdown ===== */
 .ws-mode-dropdown{position:relative;margin-bottom:18px}
-.ws-mode-trigger{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);cursor:pointer;transition:all .15s;box-shadow:var(--shadow);overflow:hidden}
+.ws-mode-trigger{display:flex;align-items:center;gap:10px;width:100%;min-height:56px;padding:10px 12px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line-2);cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
 .ws-mode-trigger:hover{border-color:var(--violet);box-shadow:var(--shadow-lg)}
 .ws-mode-badge{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ws-mode-badge.cm{background:rgba(234,88,12,.15);color:#ea580c}
 .ws-mode-badge.pm{background:rgba(16,185,129,.15);color:#10b981}
-.ws-mode-label{flex:1;font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ws-mode-label{flex:1;min-width:0;font-size:13px;font-weight:700;line-height:1.25;color:var(--ink);white-space:normal;overflow-wrap:normal;word-break:normal;text-align:left}
 .ws-mode-chevron{color:var(--muted-ink);transition:transform .2s;flex-shrink:0}
 .ws-mode-chevron.open{transform:rotate(180deg)}
 .ws-mode-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow-lg);z-index:60;display:flex;flex-direction:column;gap:2px;padding:6px;overflow:hidden}
-.ws-mode-option{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;background:none;border:none;cursor:pointer;text-align:left;transition:background .15s;overflow:hidden}
+.ws-mode-option{display:flex;align-items:center;gap:10px;min-height:52px;padding:9px 10px;border-radius:7px;background:none;border:none;cursor:pointer;text-align:left;transition:background .15s}
 .ws-mode-option:hover{background:var(--hover)}
 .ws-mode-option.selected{background:var(--violet-soft)}
 .ws-mode-check{color:var(--violet);flex-shrink:0;margin-left:auto}
@@ -1025,7 +1025,7 @@
   .ws-mode-switch{grid-column:1/-1;grid-row:2;width:100%}
   .ws-mode-switch button{flex:1;min-height:38px;padding:7px 10px;overflow:hidden;text-overflow:ellipsis}
   .topbar-actions{min-width:0;gap:7px}
-  .topbar-clock{display:none}
+  .topbar-clock{display:flex}
   .global-search{min-width:0;width:clamp(150px,24vw,220px)}
   .global-search input{min-width:0;width:100%}
   .plant-content{max-width:none;padding:22px 20px 32px}
@@ -1069,7 +1069,7 @@
   .ws-mode-switch{grid-column:1/-1;width:100%}
   .ws-mode-switch button{flex:1;min-height:38px;white-space:normal;line-height:1.15}
   .topbar-actions{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto auto;width:100%}
-  .topbar-clock{display:none}
+  .topbar-clock{display:flex;grid-column:1/-1;justify-self:start}
   .global-search{width:100%;min-width:0}
   .global-search input{width:100%;min-width:0}
   .plant-content{width:100%;max-width:none}
