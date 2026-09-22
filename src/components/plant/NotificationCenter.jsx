@@ -29,16 +29,11 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
     });
   },[]);
   const t=today();
-  const notifications=useMemo(()=>{
-    const cmOrders=orders.filter(j=>j.maintenance_type!=='PM'),pmOrders=orders.filter(j=>j.maintenance_type==='PM'),entries=[];
-    cmOrders.filter(j=>j.job_type==='Break-In'&&j.priority==='Critical'&&['Open','In-Progress'].includes(j.status)).forEach(j=>entries.push({id:`critical-${j.id}`,category:'corrective',type:'critical',title:'Emergency corrective work order',detail:`${j.wo_number} · ${j.description}`,date:notificationDate(j),job:j,action:'Open work order'}));
-    cmOrders.filter(j=>aged(j)>0).forEach(j=>entries.push({id:`aged-${j.id}`,category:'corrective',type:'aged',title:'Corrective work order past SLA',detail:`${j.wo_number} · ${aged(j)} days aged`,date:notificationDate(j),job:j,action:'Review'}));
-    overduePMs(pmOrders).forEach(j=>entries.push({id:`overdue-${j.id}`,category:'preventive',type:'overdue',title:'Preventive work order overdue',detail:`${j.wo_number} · ${j.description}`,date:notificationDate(j),job:j,action:'Open PM'}));
-    pmOrders.filter(j=>{if(['Completed','Cancelled'].includes(j.status)||!j.planned_start)return false;const diff=Math.round((new Date(`${j.planned_start}T12:00:00`)-new Date(`${t}T12:00:00`))/86400000);return diff>=0&&diff<=3;}).forEach(j=>entries.push({id:`due-${j.id}`,category:'preventive',type:'due',title:'Preventive work order due soon',detail:`${j.wo_number} · Due ${j.planned_start}`,date:notificationDate(j),job:j,action:'Open PM'}));
-    if(settings.notify_low_stock!==false)lowStockItems(items,settings.low_stock_threshold??5).forEach(item=>entries.push({id:`stock-${item.id||item.item_code}`,category:'corrective',type:'stock',title:'Spare part low on stock',detail:`${item.item_code||item.name||'Item'} · Reorder required`,date:notificationDate(item),goItems:true,action:'Item Master'}));
-    if(settings.notify_assignments!==false)newAssignments(cmOrders).forEach(j=>entries.push({id:`assignment-${j.id}`,category:'corrective',type:'assignment',title:'Assigned work not started',detail:`${j.wo_number} · ${j.technician||'Assigned technician'}`,date:notificationDate(j),job:j,action:'Open work order'}));
-    return entries.sort((a,b)=>b.date-a.date);
-  },[orders,items,settings,t]);
+const notifications = useMemo(() => {
+  ...
+  entries.push({ id: `aged-${j.id}`, category: 'corrective', type: 'aged', ... });
+  ...
+}, [orders, items, settings, t]);
 
   const signature=notifications.map(n=>n.id).join('|');
   const keysRef=useRef([]);
@@ -154,7 +149,7 @@ const fetchRows = useCallback(async (ownerId) => {
     }
   }, [applyRows, fetchRows, notifications]);
 
-  const isRead=id=>rows[id]?.is_read===true;
+  const isRead = id => rows[id]?.is_read === true;
   const unread=notifications.filter(n=>!isRead(n.id)).length;
   const visibleNotifications=notifications.filter(n=>n.category===category);
   const categoryUnread=visibleNotifications.filter(n=>!isRead(n.id)).length;
