@@ -41,15 +41,24 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
     return entries.sort((a,b)=>b.date-a.date);
   },[orders,items,settings,t]);
 
-  const fetchRows = useCallback(async (ownerId) => {
-    if (!ownerId) return;
+  // Direct Database Fetch Function
+  const fetchRows = useCallback(async () => {
     try {
+      const { data: auth } = await supabase.auth.getUser();
+      const ownerId = auth?.user?.id || orders[0]?.owner_id;
+      if (!ownerId) return;
+
       const { data, error } = await supabase
         .from('notifications')
         .select('source_key, is_read')
         .eq('owner_id', ownerId);
       
-      if (error || !mounted.current) return;
+      if (error) {
+        console.error('Fetch notification error:', error);
+        return;
+      }
+
+      if (!mounted.current) return;
 
       const dbMap = {};
       (data || []).forEach(r => {
@@ -60,40 +69,19 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
 
       applyRows(previous => ({ ...previous, ...dbMap }));
     } catch (e) {
-      console.error('Fetch notification rows failed:', e);
+      console.error('Fetch notification exception:', e);
     }
-  }, [applyRows]);
+  }, [applyRows, orders]);
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      const ownerId = auth?.user?.id;
-      if (ownerId && active) {
-        await fetchRows(ownerId);
-      }
-    })();
-    return () => { active = false; };
-  }, [fetchRows, notifications]);
+    fetchRows();
+  }, [fetchRows, notifications.length]);
 
-  useEffect(()=>{
-    let channel,active=true;
-    (async()=>{
-      const {data:auth}=await supabase.auth.getUser();
-      const ownerId=auth?.user?.id;
-      if(!ownerId||!active)return;
-      channel=supabase.channel('public:notifications')
-        .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter:`owner_id=eq.${ownerId}`},()=>{
-          fetchRows(ownerId);
-        })
-        .subscribe();
-    })();
-    return()=>{active=false;if(channel)supabase.removeChannel(channel);};
-  },[fetchRows]);
-
+  // Set Read / Unread Status Function
   const setRead = useCallback(async (keys, value) => {
     if (!keys || !keys.length) return;
     
+    // 1. Optimistic Update
     keys.forEach(k => pendingKeys.add(k));
     applyRows(previous => {
       const next = { ...previous };
@@ -104,12 +92,18 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
     });
 
     try {
+      // Get User ID from Session or Work Orders
       const { data: auth } = await supabase.auth.getUser();
-      const ownerId = auth?.user?.id;
-      if (!ownerId) return;
+      const ownerId = auth?.user?.id || orders[0]?.owner_id;
+
+      if (!ownerId) {
+        console.error('NOTIF ERROR: No valid owner_id found!');
+        return;
+      }
 
       const isoNow = new Date().toISOString();
 
+      // Payload Construction
       const upsertPayload = keys.map(k => {
         const notifItem = notifications.find(n => n.id === k);
         return {
@@ -125,23 +119,28 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
         };
       });
 
-      const { error } = await supabase
+      console.log('Sending Payload to Supabase:', upsertPayload);
+
+      // Upsert Query
+      const { data, error } = await supabase
         .from('notifications')
-        .upsert(upsertPayload, { onConflict: 'owner_id, source_key' });
+        .upsert(upsertPayload, { onConflict: 'owner_id, source_key' })
+        .select();
 
       if (error) {
-        console.error('Supabase Upsert Error:', error);
+        console.error('SUPABASE UPSERT ERROR DETAILS:', error);
       } else {
-        await fetchRows(ownerId);
+        console.log('SUCCESSFULLY SAVED TO SUPABASE:', data);
+        await fetchRows();
       }
     } catch (err) {
-      console.error('Failed setRead operation:', err);
+      console.error('Failed setRead execution:', err);
     } finally {
       setTimeout(() => {
         keys.forEach(k => pendingKeys.delete(k));
       }, 300);
     }
-  }, [applyRows, fetchRows, notifications]);
+  }, [applyRows, fetchRows, notifications, orders]);
 
   const isRead = id => Boolean(rows[id]?.is_read || rows[String(id)]?.is_read);
 
