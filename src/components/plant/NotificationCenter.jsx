@@ -97,56 +97,60 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
   },[fetchRows]);
 
   const setRead = useCallback(async (keys, value) => {
-    if (!keys.length) return;
+    if (!keys || !keys.length) return;
+    
+    // 1. Immediate local UI change
     keys.forEach(k => pendingKeys.add(k));
-    const rollback = {};
     applyRows(previous => {
       const next = { ...previous };
-      keys.forEach(k => { rollback[k] = previous[k]; next[k] = { ...(previous[k] || {}), is_read: value }; });
+      keys.forEach(k => {
+        next[k] = { ...(previous[k] || {}), is_read: value };
+      });
       return next;
     });
+
     try {
       const { data: auth } = await supabase.auth.getUser();
       const ownerId = auth?.user?.id;
-      if (!ownerId) return;
+      if (!ownerId) {
+        keys.forEach(k => pendingKeys.delete(k));
+        return;
+      }
 
-      const patchDate = value ? new Date().toISOString() : null;
+      const isoNow = new Date().toISOString();
 
+      // 2. Pure Payload Objects without quote formatting bugs
       const upsertPayload = keys.map(k => {
         const notifItem = notifications.find(n => n.id === k);
         return {
           owner_id: ownerId,
-          source_key: k,
+          source_key: String(k),
           category: notifItem?.category || 'corrective',
           type: notifItem?.type || 'aged',
-          title: notifItem?.title || 'Notification',
-          detail: notifItem?.detail || '',
-          event_at: notifItem?.date ? new Date(notifItem.date).toISOString() : new Date().toISOString(),
-          is_read: value,
-          read_at: patchDate
+          title: String(notifItem?.title || 'Notification'),
+          detail: String(notifItem?.detail || ''),
+          event_at: notifItem?.date ? new Date(notifItem.date).toISOString() : isoNow,
+          is_read: Boolean(value),
+          read_at: value ? isoNow : null
         };
       });
 
+      // 3. Clean Upsert query
       const { error } = await supabase
         .from('notifications')
         .upsert(upsertPayload, { onConflict: 'owner_id, source_key' });
 
       if (error) {
-        console.error('Supabase upsert error:', error);
-        throw error;
+        console.error('Supabase Upsert Failed:', error.message || error);
+      } else {
+        await fetchRows(ownerId);
       }
-
-      keys.forEach(k => pendingKeys.delete(k));
-      await fetchRows(ownerId);
     } catch (err) {
-      console.error('Failed to update read state in Supabase:', err);
-      applyRows(previous => {
-        const next = { ...previous };
-        keys.forEach(k => { if (rollback[k]) next[k] = rollback[k]; else delete next[k]; });
-        return next;
-      });
+      console.error('Failed setRead operation:', err);
     } finally {
-      keys.forEach(k => pendingKeys.delete(k));
+      setTimeout(() => {
+        keys.forEach(k => pendingKeys.delete(k));
+      }, 300);
     }
   }, [applyRows, fetchRows, notifications]);
 
