@@ -47,31 +47,19 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
   // The database is the single source of truth. Alerts generated from work
   // orders are cross-referenced by `source_key`; existing rows are never
   // rewritten, so is_read = true survives every reload and navigation.
-  //
-  // Everything below is paged / chunked on purpose: filtering hundreds of keys
-  // inside one request builds a URL long enough for the API gateway to reject
-  // it, which used to make reads and writes fail silently (alerts came back
-  // unread after every refresh).
-  const PAGE=1000,CHUNK=40;
   const fetchRows=useCallback(async ownerId=>{
-    const collected=[];
-    for(let page=0;;page+=1){
-      const from=page*PAGE;
-      const {data,error}=await supabase.from('notifications').select('id,source_key,is_read').eq('owner_id',ownerId).order('created_at',{ascending:false}).range(from,from+PAGE-1);
-      if(error){console.error('[notifications] read failed',error);return;}
-      collected.push(...(data||[]));
-      if(!data||data.length<PAGE)break;
-    }
-    if(!mounted.current)return;
+    const keys=keysRef.current;
+    if(!keys.length)return;
+    const {data,error}=await supabase.from('notifications').select('id,source_key,is_read').eq('owner_id',ownerId).in('source_key',keys);
+    if(error||!mounted.current)return;
     applyRows(previous=>{
       const next={...previous};
-      collected.forEach(r=>{
+      (data||[]).forEach(r=>{
         if(pendingKeys.has(r.source_key))return; // a click in flight wins
         next[r.source_key]={id:r.id,is_read:!!r.is_read};
       });
       return next;
     });
-    return collected;
   },[applyRows]);
 
   const sync=useCallback(async()=>{
@@ -80,38 +68,32 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
       const {data:auth}=await supabase.auth.getUser();
       const ownerId=auth?.user?.id;
       if(!ownerId)return;
-      const stored=new Set(((await fetchRows(ownerId))||[]).map(r=>r.source_key));
+      const {data:existing}=await supabase.from('notifications').select('source_key').eq('owner_id',ownerId).in('source_key',keysRef.current);
+      const stored=new Set((existing||[]).map(r=>r.source_key));
       const missing=notifications.filter(n=>!stored.has(n.id));
-      if(!missing.length)return;
-      const rowsToAdd=missing.map(n=>({owner_id:ownerId,source_key:n.id,category:n.category,type:n.type,title:n.title,detail:n.detail,event_at:n.date.toISOString(),is_read:false}));
-      for(let i=0;i<rowsToAdd.length;i+=200){
-        // Existing rows keep their acknowledgement: duplicates are ignored, never overwritten.
-        const {error}=await supabase.from('notifications').upsert(rowsToAdd.slice(i,i+200),{onConflict:'owner_id,source_key',ignoreDuplicates:true});
-        if(error)console.error('[notifications] create failed',error);
+      if(missing.length){
+        const inserts=missing.map(n=>({owner_id:ownerId,source_key:n.id,category:n.category,type:n.type,title:n.title,detail:n.detail,event_at:n.date.toISOString(),is_read:false}));
+        await supabase.from('notifications').insert(inserts); // duplicates from a parallel tab are rejected by the unique key, never updated
       }
       await fetchRows(ownerId);
-    }catch(e){console.error('[notifications] sync failed',e);}
+    }catch{/* alerts still render from the last known read state */}
   },[signature,fetchRows]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(()=>{sync();},[sync]);
 
   // Realtime: acknowledging an alert on a PC updates the phone instantly,
-  // without a page refresh. A refetch on focus / tab return covers phones where
-  // the socket is dropped in the background.
+  // without a page refresh.
   useEffect(()=>{
-    let channel,active=true,ownerId=null;
-    const pull=()=>{if(ownerId&&active)fetchRows(ownerId);};
+    let channel,active=true;
     (async()=>{
       const {data:auth}=await supabase.auth.getUser();
-      ownerId=auth?.user?.id||null;
+      const ownerId=auth?.user?.id;
       if(!ownerId||!active)return;
-      channel=supabase.channel(`notifications-${ownerId}`)
-        .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter:`owner_id=eq.${ownerId}`},pull)
+      channel=supabase.channel('public:notifications')
+        .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter:`owner_id=eq.${ownerId}`},()=>{fetchRows(ownerId);})
         .subscribe();
-      window.addEventListener('focus',pull);
-      document.addEventListener('visibilitychange',pull);
     })();
-    return()=>{active=false;window.removeEventListener('focus',pull);document.removeEventListener('visibilitychange',pull);if(channel)supabase.removeChannel(channel);};
+    return()=>{active=false;if(channel)supabase.removeChannel(channel);};
   },[fetchRows]);
 
   const setRead=useCallback(async(keys,value)=>{
@@ -126,22 +108,17 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
     try{
       const {data:auth}=await supabase.auth.getUser();
       const ownerId=auth?.user?.id;
-      if(!ownerId)throw new Error('No signed-in user');
+      if(!ownerId)return;
       const patch={is_read:value,read_at:value?new Date().toISOString():null};
-      for(let i=0;i<keys.length;i+=CHUNK){
-        const batch=keys.slice(i,i+CHUNK);
-        const ids=batch.map(k=>rowCache[k]?.id).filter(Boolean);
-        const {data,error}=ids.length===batch.length
-          ?await supabase.from('notifications').update(patch).in('id',ids).select('id')
-          :await supabase.from('notifications').update(patch).eq('owner_id',ownerId).in('source_key',batch).select('id');
-        if(error)throw error;
-        if(!data||!data.length)throw new Error('Acknowledgement was not stored');
-      }
+      const ids=keys.map(k=>rowCache[k]?.id).filter(Boolean);
+      const {error}=ids.length===keys.length
+        ?await supabase.from('notifications').update(patch).in('id',ids)
+        :await supabase.from('notifications').update(patch).eq('owner_id',ownerId).in('source_key',keys);
+      if(error)throw error;
       keys.forEach(k=>pendingKeys.delete(k));
       await fetchRows(ownerId);
-    }catch(e){
+    }catch{
       // Write failed — restore the last known truth from the database.
-      console.error('[notifications] write failed',e);
       applyRows(previous=>{const next={...previous};keys.forEach(k=>{if(rollback[k])next[k]=rollback[k];else delete next[k];});return next;});
     }finally{
       keys.forEach(k=>pendingKeys.delete(k));
