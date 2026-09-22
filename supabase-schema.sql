@@ -224,6 +224,20 @@ create table if not exists public.notifications (
 alter table public.notifications add column if not exists is_read boolean not null default false;
 alter table public.notifications add column if not exists read_at timestamptz;
 
+-- Clean up duplicate alerts left behind before the unique index existed,
+-- keeping the acknowledged copy.
+delete from public.notifications n
+using public.notifications d
+where n.owner_id = d.owner_id
+  and n.source_key = d.source_key
+  and n.id <> d.id
+  and (d.is_read, d.created_at, d.id) > (n.is_read, n.created_at, n.id);
+
+-- One row per alert per account. Required so re-opening the app can never
+-- create a second copy of an alert that was already acknowledged.
+create unique index if not exists notifications_owner_source_idx
+  on public.notifications (owner_id, source_key);
+
 create index if not exists notifications_owner_unread_idx
   on public.notifications (owner_id, is_read);
 
