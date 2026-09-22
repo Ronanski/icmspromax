@@ -4,19 +4,24 @@ import OrderTable from '@/components/plant/OrderTable';
 import { today, aged, effectivePriority } from '@/components/plant/plantUtils';
 
 const PRIO_ORDER = { 'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3, 'Shutdown Item': 4 };
+const DONE_STATUSES = ['Completed', 'Done'];
 export default function FocusCards({ orders, onOpen, onCreate, onView }) {
   const t = today();
+  const isDone = j => DONE_STATUSES.includes(j.status);
   // ALL work orders scheduled for today (Open, In-Progress, Deferred, Completed), sorted by priority descending
   const jobs = orders
-    .filter(j => j.job_type !== 'Break-In' && (j.planned_start === t || (j.status === 'Completed' && j.completion_time?.slice(0, 10) === t)))
+    .filter(j => j.job_type !== 'Break-In' && (j.planned_start === t || (isDone(j) && j.completion_time?.slice(0, 10) === t)))
     .sort((a, b) => (PRIO_ORDER[effectivePriority(a)] ?? 5) - (PRIO_ORDER[effectivePriority(b)] ?? 5));
   const breakInsToday = orders.filter(j => j.job_type === 'Break-In' && (j.planned_start === t || j.created_date?.slice(0, 10) === t || j.status === 'Open' || j.status === 'In-Progress')).length;
   const overdue = orders.filter(j => aged(j));
+  // Completed card: scheduled work orders AND Emergency/Break-In jobs with status 'Completed' or 'Done'
+  const scheduledDoneCount = jobs.filter(isDone).length;
+  const breakInsDoneCount = orders.filter(j => j.job_type === 'Break-In' && isDone(j) && (j.planned_start === t || j.created_date?.slice(0, 10) === t || j.completion_time?.slice(0, 10) === t)).length;
   const metrics = [
     { label: 'Scheduled', icon: CalendarCheck2, count: jobs.length, filter: { today: true } },
     { label: 'Break-Ins', icon: Zap, count: breakInsToday, filter: { today: true, job_type: 'Break-In' } },
     { label: 'In Progress', icon: Loader, count: jobs.filter(j => j.status === 'In-Progress').length, filter: { today: true, status: 'In-Progress' } },
-    { label: 'Completed', icon: CheckCircle2, count: jobs.filter(j => j.status === 'Completed').length, filter: { today: true, status: 'Completed' } },
+    { label: 'Completed', icon: CheckCircle2, count: scheduledDoneCount + breakInsDoneCount, filter: { today: true, statuses: DONE_STATUSES } },
   ];
 
   return <>
