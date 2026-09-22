@@ -247,3 +247,17 @@ create policy "Users update own notifications" on public.notifications
 drop policy if exists "Users delete own notifications" on public.notifications;
 create policy "Users delete own notifications" on public.notifications
   for delete to authenticated using (auth.uid() = owner_id);
+
+-- ------------------------------------------------- realtime for notifications
+-- Required for cross-device sync: the client subscribes to
+-- postgres_changes on public.notifications.
+alter table public.notifications replica identity full;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notifications'
+  ) then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+end $$;

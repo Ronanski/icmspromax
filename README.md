@@ -1,21 +1,44 @@
-# Backlog Clarity
+# Instant Alerts
 
-do this without asking and apply to the app after:
-Create a clean Backlog Monitoring Dashboard based on this layout. Make sure it is highly efficient by applying these rules:
+EXECUTE DIRECTLY AND FIX NOTIFICATION REFRESH, REALTIME, & CROSS-DEVICE SYNC:
 
-1. By default, filter out and hide all 'Completed' status items from the table so it only shows actual backlog (Open, In Progress, etc.).
+1. ENABLE REALTIME SUPABASE SUBSCRIPTION:
 
-2. Link the "Total Backlog" graph and "Key Metrics" to the table. Clicking a bar (like 'Fresh') or a metric (like 'Unassigned') must automatically filter the table below to show only those items. Add a "Clear Filter" button.
+   - In the Notification provider/context, subscribe to real-time changes using:
 
-3. Clean up the badges: Keep the solid bright badge ONLY for 'URGENT'. Make 'NORMAL' and 'LOW PRIORITY' plain text to reduce clutter.
+     `supabase.channel('public:notifications')`
 
-4. Highlight overdue tasks: If the Target Date is in the past and the status is not completed, turn the date text red.
+     `.on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, payload => { refetchOrUpdateState() })`
+
+     `.subscribe()`
+
+   - Ensures when a user marks an alert as read on PC, it instantly updates on mobile without page refresh.
+
+2. DATABASE-FIRST FETCHING & REFRESH PERSISTENCE:
+
+   - Always fetch notifications directly from the Supabase `notifications` table on initial page load and refresh.
+
+   - When generating alerts dynamically from Work Orders, cross-reference existing records by `source_key` in Supabase.
+
+   - If `is_read === true` in Supabase, preserve `is_read: true`. Never overwrite or reset read items back to unread upon refresh.
+
+3. VISUAL STATUS & ACKNOWLEDGE BUTTON SYNC:
+
+   - Remove the blue unread indicator dot IF `item.is_read === true`.
+
+   - Update the "Acknowledge" / "Mark as Read" click handler to execute an explicit Supabase DB mutation:
+
+     `await supabase.from('notifications').update({ is_read: true, read_at: new Date().toISOString() }).eq('id', item.id)`
+
+   - Ensure header counts (e.g. "0 unread") and item card visual states (blue dot & button text) stay 100% in sync across all logged-in devices.
+
+andyan ang code, andyan ang sql na reference mo, wag mo nako tatanungin.
 
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/5bc63c9c-c219-4242-be7d-80e5575c696f).
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/704976e3-d093-47f2-a06e-7ff6d065e743).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.
