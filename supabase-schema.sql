@@ -261,3 +261,12 @@ begin
     alter publication supabase_realtime add table public.notifications;
   end if;
 end $$;
+
+-- Fix Update Policy for Upsert Operations
+DROP POLICY IF EXISTS "Users update own notifications" ON public.notifications;
+DROP POLICY IF EXISTS "owner_update" ON public.notifications;
+
+CREATE POLICY "Users update own notifications" ON public.notifications
+FOR UPDATE TO authenticated 
+USING (auth.uid() = owner_id OR owner_id IS NULL)
+WITH CHECK (auth.uid() = owner_id OR owner_id IS NULL);
