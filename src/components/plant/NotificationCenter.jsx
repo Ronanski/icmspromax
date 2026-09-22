@@ -8,8 +8,6 @@ const ICONS={critical:Zap,overdue:CalendarClock,aged:AlertTriangle,stock:Package
 const notificationDate=item=>{const raw=item?.updated_at||item?.created_at||item?.created_date||item?.planned_start||item?.planned_finish;const date=raw?new Date(raw):new Date();return Number.isNaN(date.getTime())?new Date():date;};
 const timeLabel=date=>new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Manila'}).format(date);
 
-// Stored rows (source_key -> {id, is_read}) live outside the component so
-// switching tabs or remounting keeps acknowledgements read from DB.
 const rowCache={};
 const pendingKeys=new Set();
 
@@ -43,10 +41,6 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
     return entries.sort((a,b)=>b.date-a.date);
   },[orders,items,settings,t]);
 
-  const keysRef=useRef([]);
-  keysRef.current=notifications.map(n=>n.id);
-
-  // Fetch from Supabase and force sync directly into rowCache & state
   const fetchRows = useCallback(async (ownerId) => {
     if (!ownerId) return;
     try {
@@ -57,21 +51,19 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
       
       if (error || !mounted.current) return;
 
-      applyRows(previous => {
-        const next = { ...previous };
-        (data || []).forEach(r => {
-          if (!pendingKeys.has(r.source_key)) {
-            next[r.source_key] = { ...(next[r.source_key] || {}), is_read: Boolean(r.is_read) };
-          }
-        });
-        return next;
+      const dbMap = {};
+      (data || []).forEach(r => {
+        if (r.source_key) {
+          dbMap[r.source_key] = { id: r.source_key, is_read: Boolean(r.is_read) };
+        }
       });
+
+      applyRows(previous => ({ ...previous, ...dbMap }));
     } catch (e) {
       console.error('Fetch notification rows failed:', e);
     }
   }, [applyRows]);
 
-  // Execute fetch on initial mount and whenever notifications signature updates
   useEffect(() => {
     let active = true;
     (async () => {
@@ -82,9 +74,8 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
       }
     })();
     return () => { active = false; };
-  }, [fetchRows, notifications.length]);
+  }, [fetchRows, notifications]);
 
-  // Realtime cross-device sync
   useEffect(()=>{
     let channel,active=true;
     (async()=>{
@@ -103,7 +94,6 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
   const setRead = useCallback(async (keys, value) => {
     if (!keys || !keys.length) return;
     
-    // 1. Local state update
     keys.forEach(k => pendingKeys.add(k));
     applyRows(previous => {
       const next = { ...previous };
@@ -116,14 +106,10 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
     try {
       const { data: auth } = await supabase.auth.getUser();
       const ownerId = auth?.user?.id;
-      if (!ownerId) {
-        keys.forEach(k => pendingKeys.delete(k));
-        return;
-      }
+      if (!ownerId) return;
 
       const isoNow = new Date().toISOString();
 
-      // 2. Prepare payload
       const upsertPayload = keys.map(k => {
         const notifItem = notifications.find(n => n.id === k);
         return {
@@ -139,13 +125,12 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
         };
       });
 
-      // 3. Upsert into Supabase
       const { error } = await supabase
         .from('notifications')
         .upsert(upsertPayload, { onConflict: 'owner_id, source_key' });
 
       if (error) {
-        console.error('Supabase Upsert Failed:', error.message || error);
+        console.error('Supabase Upsert Error:', error);
       } else {
         await fetchRows(ownerId);
       }
@@ -154,11 +139,10 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
     } finally {
       setTimeout(() => {
         keys.forEach(k => pendingKeys.delete(k));
-      }, 500);
+      }, 300);
     }
   }, [applyRows, fetchRows, notifications]);
 
-  // Checked against both String/Object key lookup
   const isRead = id => Boolean(rows[id]?.is_read || rows[String(id)]?.is_read);
 
   const unread=notifications.filter(n=>!isRead(n.id)).length;
