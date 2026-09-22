@@ -47,39 +47,39 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
   // The database is the single source of truth. Alerts generated from work
   // orders are cross-referenced by `source_key`; existing rows are never
   // rewritten, so is_read = true survives every reload and navigation.
-  const fetchRows=useCallback(async ownerId=>{
-    const keys=keysRef.current;
-    if(!keys.length)return;
-    const {data,error}=await supabase.from('notifications').select('id,source_key,is_read').eq('owner_id',ownerId).in('source_key',keys);
-    if(error||!mounted.current)return;
-    applyRows(previous=>{
-      const next={...previous};
-      (data||[]).forEach(r=>{
-        if(pendingKeys.has(r.source_key))return; // a click in flight wins
-        next[r.source_key]={id:r.id,is_read:!!r.is_read};
+  const fetchRows = useCallback(async (ownerId) => {
+    if (!ownerId) return;
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('source_key, is_read')
+        .eq('owner_id', ownerId);
+      
+      if (error || !mounted.current) return;
+
+      applyRows(previous => {
+        const next = { ...previous };
+        (data || []).forEach(r => {
+          next[r.source_key] = { ...(next[r.source_key] || {}), is_read: !!r.is_read };
+        });
+        return next;
       });
-      return next;
-    });
-  },[applyRows]);
+    } catch (e) {
+      console.error('Fetch notification rows failed:', e);
+    }
+  }, [applyRows]);
 
-  const sync=useCallback(async()=>{
-    if(!notifications.length)return;
-    try{
-      const {data:auth}=await supabase.auth.getUser();
-      const ownerId=auth?.user?.id;
-      if(!ownerId)return;
-      const {data:existing}=await supabase.from('notifications').select('source_key').eq('owner_id',ownerId).in('source_key',keysRef.current);
-      const stored=new Set((existing||[]).map(r=>r.source_key));
-      const missing=notifications.filter(n=>!stored.has(n.id));
-      if(missing.length){
-        const inserts=missing.map(n=>({owner_id:ownerId,source_key:n.id,category:n.category,type:n.type,title:n.title,detail:n.detail,event_at:n.date.toISOString(),is_read:false}));
-        await supabase.from('notifications').insert(inserts); // duplicates from a parallel tab are rejected by the unique key, never updated
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const ownerId = auth?.user?.id;
+      if (ownerId && active) {
+        await fetchRows(ownerId);
       }
-      await fetchRows(ownerId);
-    }catch{/* alerts still render from the last known read state */}
-  },[signature,fetchRows]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(()=>{sync();},[sync]);
+    })();
+    return () => { active = false; };
+  }, [fetchRows]);
 
   // Realtime: acknowledging an alert on a PC updates the phone instantly,
   // without a page refresh.
