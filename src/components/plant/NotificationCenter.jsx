@@ -96,34 +96,57 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
     return()=>{active=false;if(channel)supabase.removeChannel(channel);};
   },[fetchRows]);
 
-  const setRead=useCallback(async(keys,value)=>{
-    if(!keys.length)return;
-    keys.forEach(k=>pendingKeys.add(k));
-    const rollback={};
-    applyRows(previous=>{
-      const next={...previous};
-      keys.forEach(k=>{rollback[k]=previous[k];next[k]={...(previous[k]||{}),is_read:value};});
+  const setRead = useCallback(async (keys, value) => {
+    if (!keys.length) return;
+    keys.forEach(k => pendingKeys.add(k));
+    const rollback = {};
+    applyRows(previous => {
+      const next = { ...previous };
+      keys.forEach(k => { rollback[k] = previous[k]; next[k] = { ...(previous[k] || {}), is_read: value }; });
       return next;
     });
-    try{
-      const {data:auth}=await supabase.auth.getUser();
-      const ownerId=auth?.user?.id;
-      if(!ownerId)return;
-      const patch={is_read:value,read_at:value?new Date().toISOString():null};
-      const ids=keys.map(k=>rowCache[k]?.id).filter(Boolean);
-      const {error}=ids.length===keys.length
-        ?await supabase.from('notifications').update(patch).in('id',ids)
-        :await supabase.from('notifications').update(patch).eq('owner_id',ownerId).in('source_key',keys);
-      if(error)throw error;
-      keys.forEach(k=>pendingKeys.delete(k));
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const ownerId = auth?.user?.id;
+      if (!ownerId) return;
+
+      const patchDate = value ? new Date().toISOString() : null;
+
+      // Mag-map ng payload items para sa upsert
+      const upsertPayload = keys.map(k => {
+        const notifItem = notifications.find(n => n.id === k);
+        return {
+          owner_id: ownerId,
+          source_key: k,
+          category: notifItem?.category || 'corrective',
+          type: notifItem?.type || 'aged',
+          title: notifItem?.title || '',
+          detail: notifItem?.detail || '',
+          event_at: notifItem?.date || new Date().toISOString(),
+          is_read: value,
+          read_at: patchDate
+        };
+      });
+
+      // Gamitin ang upsert para siguradong ma-save sa DB
+      const { error } = await supabase
+        .from('notifications')
+        .upsert(upsertPayload, { onConflict: 'owner_id, source_key' });
+
+      if (error) throw error;
+      keys.forEach(k => pendingKeys.delete(k));
       await fetchRows(ownerId);
-    }catch{
-      // Write failed — restore the last known truth from the database.
-      applyRows(previous=>{const next={...previous};keys.forEach(k=>{if(rollback[k])next[k]=rollback[k];else delete next[k];});return next;});
-    }finally{
-      keys.forEach(k=>pendingKeys.delete(k));
+    } catch (err) {
+      console.error('Failed to update read state in Supabase:', err);
+      applyRows(previous => {
+        const next = { ...previous };
+        keys.forEach(k => { if (rollback[k]) next[k] = rollback[k]; else delete next[k]; });
+        return next;
+      });
+    } finally {
+      keys.forEach(k => pendingKeys.delete(k));
     }
-  },[applyRows,fetchRows]);
+  }, [applyRows, fetchRows, notifications]);
 
   const isRead=id=>rows[id]?.is_read===true;
   const unread=notifications.filter(n=>!isRead(n.id)).length;
