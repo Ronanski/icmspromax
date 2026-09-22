@@ -5,7 +5,7 @@
 // working — but every save / delete is now persisted in the database and
 // survives a browser refresh.
 
-import supabase from "./supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import parsePlantImport from "./parseImport";
 
 const TABLES = {
@@ -50,11 +50,13 @@ async function currentUser() {
   const { data, error } = await supabase.auth.getUser();
   if (error || !data?.user) throw Error("You are signed out. Please log in again.");
   const u = data.user;
+  const { data: profile } = await supabase.from("user_profiles").select("*").eq("user_id", u.id).maybeSingle();
   return {
     id: u.id,
     email: u.email,
-    name: u.user_metadata?.full_name || u.email?.split("@")[0] || "Supervisor",
-    full_name: u.user_metadata?.full_name || "",
+    name: profile?.full_name || u.user_metadata?.full_name || u.email?.split("@")[0] || "Supervisor",
+    full_name: profile?.full_name || u.user_metadata?.full_name || "",
+    profile,
   };
 }
 
@@ -214,6 +216,15 @@ async function plantWorkspace(payload = {}) {
       fail(createError);
       workspaces = [created];
     }
+    const profile = user.profile;
+    if (profile) {
+      workspaces = workspaces.map((workspace) => ({
+        ...workspace,
+        designation: profile.designation || workspace.designation,
+        plant_role: profile.plant_role || workspace.plant_role,
+        shift: profile.shift || workspace.shift,
+      }));
+    }
     return { user, workspaces };
   }
 
@@ -276,18 +287,17 @@ async function plantWorkspace(payload = {}) {
 
 
     case "profile": {
-      const { data: saved, error } = await supabase
-        .from("workspaces")
-        .update({
-          designation: String(data?.designation || "").slice(0, 100),
-          plant_role: String(data?.plant_role || "").slice(0, 100),
-          shift: String(data?.shift || "").slice(0, 50),
-        })
-        .eq("id", ws.id)
-        .select()
-        .single();
-      fail(error);
-      return saved;
+      const profile = {
+        user_id: user.id,
+        full_name: String(data?.full_name || user.full_name || user.name || "").trim().slice(0, 100),
+        designation: String(data?.designation || "").slice(0, 100),
+        plant_role: String(data?.plant_role || "").slice(0, 100),
+        shift: String(data?.shift || "").slice(0, 100),
+        updated_at: nowISO(),
+      };
+      const { error: profileError } = await supabase.from("user_profiles").upsert(profile);
+      fail(profileError);
+      return profile;
     }
 
     // Per-user web app preferences (shortcuts, analytics metrics, default
@@ -656,10 +666,14 @@ const db = {
     },
     me: currentUser,
     async updateMe(values) {
+      const user = await currentUser();
+      const fullName = String(values.full_name ?? values.name ?? "").trim().slice(0, 100);
       const { error } = await supabase.auth.updateUser({
-        data: { full_name: values.full_name ?? values.name ?? "" },
+        data: { full_name: fullName },
       });
       fail(error);
+      const { error: profileError } = await supabase.from("user_profiles").upsert({ user_id: user.id, full_name: fullName, updated_at: nowISO() });
+      fail(profileError);
       return currentUser();
     },
     async logout() {

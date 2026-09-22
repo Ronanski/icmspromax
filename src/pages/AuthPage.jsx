@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2, LogIn, UserPlus } from 'lucide-react';
-import supabase from '@/lib/supabaseClient';
+import {supabase} from '@/integrations/supabase/client';
 
 export default function AuthPage() {
   const [mode, setMode] = useState('login');
