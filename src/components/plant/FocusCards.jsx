@@ -1,44 +1,47 @@
 import React from 'react';
-import { Calendar, Zap, PlayCircle, CheckCircle2 } from 'lucide-react';
+import { Zap, ArrowRight, CalendarCheck2, AlertTriangle, Plus, Loader, CheckCircle2 } from 'lucide-react';
+import OrderTable from '@/components/plant/OrderTable';
+import { today, aged, effectivePriority } from '@/components/plant/plantUtils';
 
-export default function FocusCards({ orders = [], onCardClick }) {
-  const scheduledCount = orders.filter(j => j.status === 'Scheduled' || j.status === 'Open').length;
-  const breakInCount = orders.filter(j => j.job_type === 'Break-In' && j.status !== 'Completed').length;
-  const inProgressCount = orders.filter(j => j.status === 'In-Progress').length;
-  const completedCount = orders.filter(j => j.status === 'Completed').length;
-
-  const cards = [
-    { id: 'scheduled', label: 'Scheduled Work', count: scheduledCount, icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { id: 'breakin', label: 'Break-In Active', count: breakInCount, icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-    { id: 'inprogress', label: 'In Execution', count: inProgressCount, icon: PlayCircle, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-    { id: 'completed', label: 'Shift Accomplished', count: completedCount, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
+const PRIO_ORDER = { 'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3, 'Shutdown Item': 4 };
+const DONE_STATUSES = ['Completed', 'Done'];
+export default function FocusCards({ orders, onOpen, onCreate, onView }) {
+  const t = today();
+  const isDone = j => DONE_STATUSES.includes(j.status);
+  // ALL work orders scheduled for today (Open, In-Progress, Deferred, Completed), sorted by priority descending
+  const jobs = orders
+    .filter(j => j.job_type !== 'Break-In' && (j.planned_start === t || (isDone(j) && j.completion_time?.slice(0, 10) === t)))
+    .sort((a, b) => (PRIO_ORDER[effectivePriority(a)] ?? 5) - (PRIO_ORDER[effectivePriority(b)] ?? 5));
+  const breakInsToday = orders.filter(j => j.job_type === 'Break-In' && (j.planned_start === t || j.created_date?.slice(0, 10) === t || j.status === 'Open' || j.status === 'In-Progress')).length;
+  const overdue = orders.filter(j => aged(j));
+  // Completed card: scheduled work orders AND Emergency/Break-In jobs with status 'Completed' or 'Done'
+  const scheduledDoneCount = jobs.filter(isDone).length;
+  const breakInsDoneCount = orders.filter(j => j.job_type === 'Break-In' && isDone(j) && (j.planned_start === t || j.created_date?.slice(0, 10) === t || j.completion_time?.slice(0, 10) === t)).length;
+  const metrics = [
+    { label: 'Scheduled', icon: CalendarCheck2, count: jobs.length, filter: { today: true } },
+    { label: 'Break-Ins', icon: Zap, count: breakInsToday, filter: { today: true, job_type: 'Break-In' } },
+    { label: 'In Progress', icon: Loader, count: jobs.filter(j => j.status === 'In-Progress').length, filter: { today: true, status: 'In-Progress' } },
+    { label: 'Completed', icon: CheckCircle2, count: scheduledDoneCount + breakInsDoneCount, filter: { today: true, statuses: DONE_STATUSES } },
   ];
 
-  return (
-    /* RESPONSIVE GRID: 1 col sa CP (default), 2 cols sa Tablet (sm), 4 cols sa Desktop (lg) */
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-      {cards.map((card) => {
-        const Icon = card.icon;
-        return (
-          <div
-            key={card.id}
-            onClick={() => onCardClick && onCardClick(card.id)}
-            className="flex items-center justify-between p-4 rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-all cursor-pointer"
-          >
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {card.label}
-              </p>
-              <p className="text-2xl font-bold tracking-tight sm:text-3xl">
-                {card.count}
-              </p>
-            </div>
-            <div className={`p-3 rounded-xl ${card.bg} ${card.color}`}>
-              <Icon className="h-6 w-6" />
-            </div>
-          </div>
-        );
-      })}
+  return <>
+    <div className="focus-mini-metrics" aria-label="Today's work metrics">
+      {metrics.map(metric => <button key={metric.label} type="button" onClick={() => onView(metric.filter)}><strong>{metric.count}</strong><span><metric.icon size={14}/>{metric.label}</span></button>)}
     </div>
-  );
+    <OrderTable orders={jobs} onOpen={onOpen} title="Today's Corrective Maintenance Execution Queue" limited/>
+    {!jobs.length && <button className="focus-empty-action text-button" onClick={() => onCreate('Scheduled')}><Plus size={15}/>Create work order<ArrowRight size={14}/></button>}
+    <div className="breakin-card breakin-card-horizontal">
+        <span className="breakin-icon"><Zap size={21}/></span>
+        <div><span className="tiny-label">UNPLANNED. NOT UNTRACKED.</span><h3>Something needs immediate attention?</h3><p>Capture emergency and break-in work. No official WO number required.</p></div>
+        <button onClick={() => onCreate('Break-In')}><Plus size={16}/>Add Emergency / Break-In Job</button>
+    </div>
+    {overdue.length > 0 && (
+      <button className="aged-banner" onClick={() => onView({ status: 'Aged' })}>
+        <AlertTriangle size={17}/>
+        <strong>{overdue.length} aged work orders require attention</strong>
+        <span>Past planned finish date</span>
+        <ArrowRight size={16}/>
+      </button>
+    )}
+  </>;
 }
