@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy, useEffect, useState } from "react";
 
-import { supabase } from "@/integrations/supabase/client";
+import supabase from "@/lib/supabaseClient";
 
 // The plant desk is a browser-only dashboard (live clock, charts), so it is
 // loaded after hydration instead of during server render.

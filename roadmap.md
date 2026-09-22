@@ -1,7 +1,6 @@
 # ICMS Promax roadmap
 
 ## Done
-- Added five shift-friendly global themes plus a custom theme creator with account-wide persistence and offline fallback
 - Paginated every shared work-order table with current and total page labels
 - Limited the notification bell to Today's Focus, strictly separated corrective and preventive alerts, improved dark-mode readability, and added per-item/all unread controls
 - Removed the center information icons from the backlog key-metrics list
@@ -17,7 +16,7 @@
 - Alert settings + notification banners: overdue PMs, low stock, aged WOs, critical break-ins, idle assignments
 - Batch 1 cleanup: retired Shift Handover and Audit Trail; added ICMS ProMax branding, compact action toasts and single-row alerts
 
-## Pending
-- New table: alert_settings
-- Roles table so admin checks are enforced by database policies, not only workspace ownership
+## Pending (needs the SQL in supabase-schema.sql run on the Supabase project)
+- New table: alert_settings (grants + RLS included)
+- Roles table so admin checks are enforced by RLS, not only workspace ownership
 

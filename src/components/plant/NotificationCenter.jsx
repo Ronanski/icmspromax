@@ -7,10 +7,10 @@ const ICONS={critical:Zap,overdue:CalendarClock,aged:AlertTriangle,stock:Package
 const notificationDate=item=>{const raw=item?.updated_at||item?.created_at||item?.created_date||item?.planned_start||item?.planned_finish;const date=raw?new Date(raw):new Date();return Number.isNaN(date.getTime())?new Date():date;};
 const timeLabel=date=>new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Manila'}).format(date);
 
-export default function NotificationCenter({orders=[],items=[],settings={},defaultCategory='corrective',onOpenJob,onGoToPM,onGoToItems}){
+export default function NotificationCenter({orders=[],items=[],settings={},onOpenJob,onGoToPM,onGoToItems}){
   const storageKey='icms-promax-read-notifications';
   const [readIds,setReadIds]=useState(()=>{try{return new Set(JSON.parse(localStorage.getItem(storageKey)||'[]'));}catch{return new Set();}});
-  const [category,setCategory]=useState(defaultCategory);
+  const [category,setCategory]=useState('corrective');
   const t=today();
   const notifications=useMemo(()=>{
     const cmOrders=orders.filter(j=>j.maintenance_type!=='PM'),pmOrders=orders.filter(j=>j.maintenance_type==='PM'),entries=[];
