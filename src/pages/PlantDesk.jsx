@@ -47,7 +47,7 @@ export default function PlantDesk(){
   // Shortcuts, analytics metrics and default views, kept per user across devices.
   const [prefs,updatePrefs]=usePrefs(ws.workspace);
 
-  const [tab,setTab]=useState('focus'),[dark,setDark]=useState(()=>{try{return localStorage.getItem('plant-theme')!=='light';}catch{return true;}}),[sidebarOpen,setSidebarOpen]=useState(()=>window.innerWidth>768),[workspaceMode,setWorkspaceMode]=useState('cm'),[pmDateFrom,setPmDateFrom]=useState(''),[pmDateTo,setPmDateTo]=useState('');
+  const [tab,setTab]=useState('focus'),[sidebarOpen,setSidebarOpen]=useState(()=>window.innerWidth>768),[workspaceMode,setWorkspaceMode]=useState('cm'),[pmDateFrom,setPmDateFrom]=useState(''),[pmDateTo,setPmDateTo]=useState('');
   const [filters,setFilters]=useState({}),[search,setSearch]=useState('');
   const [analyticsFilters,setAnalyticsFilters]=useState({});
   const [backlogTableFilter,setBacklogTableFilter]=useState(null);
@@ -56,7 +56,6 @@ export default function PlantDesk(){
 
   useEffect(()=>{if(!ws.admin&&adminTabs.includes(tab))setTab('focus');},[ws.admin,tab]);
   useEffect(()=>{document.title=`${titles[tab]||'Plant Desk'} | ICMS ProMax`;},[tab]);
-  useEffect(()=>{document.documentElement.classList.toggle('dark',dark);try{localStorage.setItem('plant-theme',dark?'dark':'light');}catch{}},[dark]);
 
   // Strict workspace isolation: CM workspace never sees PM records.
   const cmOrders=useMemo(()=>ws.orders.filter(j=>j.maintenance_type!=='PM'),[ws.orders]);
@@ -153,7 +152,7 @@ export default function PlantDesk(){
   return <div className="plant-shell">
     <Sidebar tab={tab} onTab={setTab} workspaces={ws.workspaces} workspace={ws.workspace} onWorkspace={ws.chooseWorkspace} user={ws.user} admin={ws.admin} open={sidebarOpen} onClose={()=>setSidebarOpen(false)} count={cmOrders.length} pmCount={pmOrders.length} breakInCount={allBreakInCount} onProfile={ws.admin?()=>setProfileOpen(true):undefined} profileName={ws.profileName} workspaceMode={workspaceMode} onSwitchMode={m=>{setWorkspaceMode(m);setFilters({});setTab(m==='pm'?'pmfocus':'focus');}}/>
     <div className={`plant-main ${sidebarOpen?'':'sidebar-hidden'}`}>
-      <Topbar title={titles[tab]} onMenu={()=>setSidebarOpen(v=>!v)} dark={dark} onDark={()=>setDark(!dark)} search={search} onSearch={setSearch} onTab={setTab} clockFormat={ws.workspace?.clock_format||'12'}/>
+      <Topbar title={titles[tab]} onMenu={()=>setSidebarOpen(v=>!v)} search={search} onSearch={setSearch} onTab={setTab} clockFormat={ws.workspace?.clock_format||'12'}/>
       <div className="plant-content">
         {ws.error&&<div className="content-error"><AlertCircle size={16}/>{ws.error}</div>}
         {tab==='focus'&&<><div className="page-header"><div><h1>{greetingText()}</h1><p>{subtitle}</p></div><div className="page-actions">{ws.admin&&<button className="secondary-button" onClick={()=>setSummaryOpen(true)}><FileText size={16}/>Shift Summary</button>}<NotificationCenter orders={ws.orders} items={ws.items} settings={alertSettings} onOpenJob={openDrawer} onGoToPM={()=>setTab('pm')} onGoToItems={ws.admin?()=>setTab('items'):undefined}/><button className="secondary-button" onClick={()=>openImport('scheduled')}><UploadCloud size={16}/>Import</button><button className="primary-button" onClick={()=>createJob('Scheduled')}><Plus size={16}/>Add work order</button></div></div><FocusCards orders={cmOrders} onOpen={openDrawer} onCreate={createJob} onView={f=>{setFilters(f);setTab('orders');}}/><SLAAgingStrip orders={cmOrders} onView={f=>{setFilters(f);setTab('orders');}}/><div className="focus-2x2-grid"><TodayBreakInList orders={cmOrders} onOpen={openDrawer}/><ShortcutCards onTab={setTab} onLogger={()=>setLoggerOpen(true)} onCreate={createJob} onFilter={drill} admin={ws.admin} shortcuts={prefs.shortcuts} onChange={v=>updatePrefs({shortcuts:v})}/><ManpowerAssignment orders={cmOrders} onOpen={openDrawer}/><MiniCalendar workspace={ws.workspace}/></div></>}

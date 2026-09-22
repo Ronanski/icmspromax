@@ -6,10 +6,12 @@ export type ThemeMode = "light" | "dark";
 export type ThemePresetKey = "light" | "dark" | "midnight" | "emerald" | "amber";
 export type CustomTheme = {
   primary: string;
+  secondary: string;
   background: string;
   card: string;
   border: string;
   mode: ThemeMode;
+  angle: number;
 };
 export type ThemePreference = ThemePresetKey | CustomTheme;
 
@@ -26,6 +28,8 @@ type ThemeTokens = CustomTheme & {
   accent: string;
   primaryForeground: string;
   sidebar: string;
+  secondary: string;
+  angle: number;
 };
 
 const STORAGE_KEY = "plant-theme-preference";
@@ -35,27 +39,27 @@ export const THEME_PRESETS: Record<ThemePresetKey, { label: string; description:
   light: {
     label: "Light",
     description: "Clean slate and crisp contrast",
-    tokens: { mode: "light", primary: "#0a6ed1", background: "#f0f2f5", card: "#ffffff", border: "#d9dce1", foreground: "#1a2733", muted: "#ebeef1", mutedForeground: "#667585", accent: "#e8f1fb", primaryForeground: "#ffffff", sidebar: "#ffffff" },
+    tokens: { mode: "light", primary: "#2477c9", secondary: "#6aa9a0", angle: 135, background: "#f4f7f9", card: "#ffffff", border: "#d9e1e6", foreground: "#1a2733", muted: "#eaf0f2", mutedForeground: "#667585", accent: "#e5f0f5", primaryForeground: "#ffffff", sidebar: "#ffffff" },
   },
   dark: {
     label: "Dark",
     description: "Deep zinc with soft cyan accents",
-    tokens: { mode: "dark", primary: "#38a7f0", background: "#151a20", card: "#1e252d", border: "#35404a", foreground: "#e6edf3", muted: "#272f38", mutedForeground: "#9aa8b4", accent: "#123b59", primaryForeground: "#06131d", sidebar: "#1e252d" },
+    tokens: { mode: "dark", primary: "#65a8d9", secondary: "#64a594", angle: 135, background: "#151a20", card: "#1e252d", border: "#35404a", foreground: "#e6edf3", muted: "#272f38", mutedForeground: "#9aa8b4", accent: "#183848", primaryForeground: "#07131a", sidebar: "#1e252d" },
   },
   midnight: {
     label: "Midnight Navy",
     description: "Icy blue for night-shift viewing",
-    tokens: { mode: "dark", primary: "#72b7ff", background: "#0b1329", card: "#111d38", border: "#283a5d", foreground: "#e8f1ff", muted: "#172642", mutedForeground: "#9fb2cc", accent: "#17385f", primaryForeground: "#07101f", sidebar: "#0e1931" },
+    tokens: { mode: "dark", primary: "#72b7ff", secondary: "#8d91cf", angle: 140, background: "#0b1329", card: "#111d38", border: "#283a5d", foreground: "#e8f1ff", muted: "#172642", mutedForeground: "#9fb2cc", accent: "#17385f", primaryForeground: "#07101f", sidebar: "#0e1931" },
   },
   emerald: {
     label: "Emerald Industrial",
     description: "Calm graphite and muted green",
-    tokens: { mode: "dark", primary: "#52c78c", background: "#101815", card: "#17221d", border: "#30463b", foreground: "#e1eee7", muted: "#202e27", mutedForeground: "#9db2a7", accent: "#0f291e", primaryForeground: "#07130d", sidebar: "#131d19" },
+    tokens: { mode: "dark", primary: "#52c78c", secondary: "#5aa8a8", angle: 135, background: "#101815", card: "#17221d", border: "#30463b", foreground: "#e1eee7", muted: "#202e27", mutedForeground: "#9db2a7", accent: "#0f291e", primaryForeground: "#07130d", sidebar: "#131d19" },
   },
   amber: {
     label: "Warm Amber Slate",
     description: "Low-blue-light, reduced eye fatigue",
-    tokens: { mode: "dark", primary: "#e7a83b", background: "#191816", card: "#24221e", border: "#494238", foreground: "#f1eadf", muted: "#302d28", mutedForeground: "#b9ad9b", accent: "#3d301b", primaryForeground: "#1b1205", sidebar: "#201e1b" },
+    tokens: { mode: "dark", primary: "#d9a756", secondary: "#b97859", angle: 140, background: "#191816", card: "#24221e", border: "#494238", foreground: "#f1eadf", muted: "#302d28", mutedForeground: "#b9ad9b", accent: "#3d301b", primaryForeground: "#1b1205", sidebar: "#201e1b" },
   },
 };
 
@@ -69,7 +73,7 @@ function normalizePreference(value: unknown): ThemePreference | null {
   const custom = value as Partial<CustomTheme>;
   if (!validHex(custom.primary) || !validHex(custom.background) || !validHex(custom.card) || !validHex(custom.border)) return null;
   if (custom.mode !== "light" && custom.mode !== "dark") return null;
-  return { primary: custom.primary, background: custom.background, card: custom.card, border: custom.border, mode: custom.mode };
+  return { primary: custom.primary, secondary: validHex(custom.secondary) ? custom.secondary : custom.primary, background: custom.background, card: custom.card, border: custom.border, mode: custom.mode, angle: typeof custom.angle === "number" ? Math.min(180, Math.max(0, custom.angle)) : 135 };
 }
 
 function hexToHsl(hex: string) {
@@ -119,7 +123,7 @@ function applyPreference(preference: ThemePreference) {
   const preset = typeof preference === "string" ? THEME_PRESETS[preference] : null;
   const tokens = preset?.tokens ?? customTokens(preference as CustomTheme);
   root.classList.toggle("dark", tokens.mode === "dark");
-  root.dataset.theme = typeof preference === "string" ? preference : "custom";
+  root.dataset["theme"] = typeof preference === "string" ? preference : "custom";
   const variables: Record<string, string> = {
     "--background": hexToHsl(tokens.background), "--foreground": hexToHsl(tokens.foreground),
     "--card": hexToHsl(tokens.card), "--card-foreground": hexToHsl(tokens.foreground),
@@ -137,6 +141,10 @@ function applyPreference(preference: ThemePreference) {
     "--ink": tokens.foreground, "--ink-2": tokens.mutedForeground, "--muted-ink": tokens.mutedForeground,
     "--line": tokens.border, "--line-2": mixHex(tokens.border, tokens.foreground, 0.2),
     "--hover": tokens.accent, "--violet": tokens.primary, "--violet-soft": tokens.accent, "--blue": tokens.primary,
+    "--theme-secondary": tokens.secondary,
+    "--theme-angle": `${tokens.angle}deg`,
+    "--theme-gradient": `linear-gradient(${tokens.angle}deg, ${tokens.primary}, ${tokens.secondary})`,
+    "--theme-gradient-soft": `linear-gradient(${tokens.angle}deg, ${mixHex(tokens.primary, tokens.background, 0.82)}, ${mixHex(tokens.secondary, tokens.background, 0.9)})`,
   };
   Object.entries(variables).forEach(([name, value]) => root.style.setProperty(name, value));
 }
@@ -145,22 +153,25 @@ function readLocalPreference(): ThemePreference {
   try {
     const saved = normalizePreference(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"));
     if (saved) return saved;
-    return localStorage.getItem(LEGACY_STORAGE_KEY) === "light" ? "light" : "dark";
+    return localStorage.getItem(LEGACY_STORAGE_KEY) === "dark" ? "dark" : "light";
   } catch {
     return "light";
   }
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreference] = useState<ThemePreference>(() => readLocalPreference());
+  const [preference, setPreference] = useState<ThemePreference>("light");
 
   useEffect(() => { applyPreference(preference); }, [preference]);
 
   useEffect(() => {
     let active = true;
+    const local = readLocalPreference();
+    setPreference(local);
+    applyPreference(local);
     supabase.auth.getUser().then(({ data }) => {
       if (!active) return;
-      const remote = normalizePreference(data.user?.user_metadata?.theme_preference);
+      const remote = normalizePreference(data.user?.user_metadata?.["theme_preference"]);
       if (remote) {
         setPreference(remote);
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(remote)); } catch { /* offline storage unavailable */ }
