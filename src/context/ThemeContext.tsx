@@ -1,209 +1,69 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
-import supabase from "@/lib/supabaseClient";
+type Theme = "light" | "dark" | "system";
 
-export type ThemeMode = "light" | "dark";
-export type ThemePresetKey = "light" | "dark" | "midnight" | "emerald" | "amber";
-export type CustomTheme = {
-  primary: string;
-  secondary: string;
-  background: string;
-  card: string;
-  border: string;
-  mode: ThemeMode;
-  angle: number;
-};
-export type ThemePreference = ThemePresetKey | CustomTheme;
-
-type ThemeContextValue = {
-  preference: ThemePreference;
-  mode: ThemeMode;
-  setTheme: (preference: ThemePreference) => Promise<void>;
-};
-
-type ThemeTokens = CustomTheme & {
-  foreground: string;
-  muted: string;
-  mutedForeground: string;
-  accent: string;
-  primaryForeground: string;
-  sidebar: string;
-  secondary: string;
-  angle: number;
-};
-
-const STORAGE_KEY = "plant-theme-preference";
-const LEGACY_STORAGE_KEY = "plant-theme";
-
-export const THEME_PRESETS: Record<ThemePresetKey, { label: string; description: string; tokens: ThemeTokens }> = {
-  light: {
-    label: "Light",
-    description: "Clean slate and crisp contrast",
-    tokens: { mode: "light", primary: "#2477c9", secondary: "#6aa9a0", angle: 135, background: "#f4f7f9", card: "#ffffff", border: "#d9e1e6", foreground: "#1a2733", muted: "#eaf0f2", mutedForeground: "#667585", accent: "#e5f0f5", primaryForeground: "#ffffff", sidebar: "#ffffff" },
-  },
-  dark: {
-    label: "Dark",
-    description: "Deep zinc with soft cyan accents",
-    tokens: { mode: "dark", primary: "#65a8d9", secondary: "#64a594", angle: 135, background: "#151a20", card: "#1e252d", border: "#35404a", foreground: "#e6edf3", muted: "#272f38", mutedForeground: "#9aa8b4", accent: "#183848", primaryForeground: "#07131a", sidebar: "#1e252d" },
-  },
-  midnight: {
-    label: "Midnight Navy",
-    description: "Icy blue for night-shift viewing",
-    tokens: { mode: "dark", primary: "#72b7ff", secondary: "#8d91cf", angle: 140, background: "#0b1329", card: "#111d38", border: "#283a5d", foreground: "#e8f1ff", muted: "#172642", mutedForeground: "#9fb2cc", accent: "#17385f", primaryForeground: "#07101f", sidebar: "#0e1931" },
-  },
-  emerald: {
-    label: "Emerald Industrial",
-    description: "Calm graphite and muted green",
-    tokens: { mode: "dark", primary: "#52c78c", secondary: "#5aa8a8", angle: 135, background: "#101815", card: "#17221d", border: "#30463b", foreground: "#e1eee7", muted: "#202e27", mutedForeground: "#9db2a7", accent: "#0f291e", primaryForeground: "#07130d", sidebar: "#131d19" },
-  },
-  amber: {
-    label: "Warm Amber Slate",
-    description: "Low-blue-light, reduced eye fatigue",
-    tokens: { mode: "dark", primary: "#d9a756", secondary: "#b97859", angle: 140, background: "#191816", card: "#24221e", border: "#494238", foreground: "#f1eadf", muted: "#302d28", mutedForeground: "#b9ad9b", accent: "#3d301b", primaryForeground: "#1b1205", sidebar: "#201e1b" },
-  },
-};
-
-const ThemeContext = createContext<ThemeContextValue | null>(null);
-
-const validHex = (value: unknown): value is string => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
-
-function normalizePreference(value: unknown): ThemePreference | null {
-  if (typeof value === "string" && value in THEME_PRESETS) return value as ThemePresetKey;
-  if (!value || typeof value !== "object") return null;
-  const custom = value as Partial<CustomTheme>;
-  if (!validHex(custom.primary) || !validHex(custom.background) || !validHex(custom.card) || !validHex(custom.border)) return null;
-  if (custom.mode !== "light" && custom.mode !== "dark") return null;
-  return { primary: custom.primary, secondary: validHex(custom.secondary) ? custom.secondary : custom.primary, background: custom.background, card: custom.card, border: custom.border, mode: custom.mode, angle: typeof custom.angle === "number" ? Math.min(180, Math.max(0, custom.angle)) : 135 };
+interface ThemeContextType {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 }
 
-function hexToHsl(hex: string) {
-  const raw = hex.slice(1);
-  const r = parseInt(raw.slice(0, 2), 16) / 255;
-  const g = parseInt(raw.slice(2, 4), 16) / 255;
-  const b = parseInt(raw.slice(4, 6), 16) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0;
-  const l = (max + min) / 2;
-  const d = max - min;
-  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
-  if (d !== 0) {
-    if (max === r) h = 60 * (((g - b) / d) % 6);
-    else if (max === g) h = 60 * ((b - r) / d + 2);
-    else h = 60 * ((r - g) / d + 4);
-  }
-  if (h < 0) h += 360;
-  return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-}
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-function mixHex(a: string, b: string, amount: number) {
-  const channels = [1, 3, 5].map((start) => {
-    const av = parseInt(a.slice(start, start + 2), 16);
-    const bv = parseInt(b.slice(start, start + 2), 16);
-    return Math.round(av + (bv - av) * amount).toString(16).padStart(2, "0");
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Kunin ang dating sineb na theme o default sa 'system'
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("app-theme") as Theme) || "system";
+    }
+    return "system";
   });
-  return `#${channels.join("")}`;
-}
 
-function customTokens(theme: CustomTheme): ThemeTokens {
-  const light = theme.mode === "light";
-  const foreground = light ? "#17212b" : "#edf4f7";
-  return {
-    ...theme,
-    foreground,
-    muted: mixHex(theme.card, theme.background, light ? 0.45 : 0.35),
-    mutedForeground: light ? "#637181" : "#a4b0b8",
-    accent: mixHex(theme.primary, theme.background, light ? 0.86 : 0.72),
-    primaryForeground: light ? "#ffffff" : "#07110d",
-    sidebar: mixHex(theme.card, theme.background, 0.2),
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+    localStorage.setItem("app-theme", newTheme);
   };
-}
-
-function applyPreference(preference: ThemePreference) {
-  const root = document.documentElement;
-  const preset = typeof preference === "string" ? THEME_PRESETS[preference] : null;
-  const tokens = preset?.tokens ?? customTokens(preference as CustomTheme);
-  root.classList.toggle("dark", tokens.mode === "dark");
-  root.dataset["theme"] = typeof preference === "string" ? preference : "custom";
-  const variables: Record<string, string> = {
-    "--background": hexToHsl(tokens.background), "--foreground": hexToHsl(tokens.foreground),
-    "--card": hexToHsl(tokens.card), "--card-foreground": hexToHsl(tokens.foreground),
-    "--popover": hexToHsl(tokens.card), "--popover-foreground": hexToHsl(tokens.foreground),
-    "--primary": hexToHsl(tokens.primary), "--primary-foreground": hexToHsl(tokens.primaryForeground),
-    "--secondary": hexToHsl(tokens.muted), "--secondary-foreground": hexToHsl(tokens.foreground),
-    "--muted": hexToHsl(tokens.muted), "--muted-foreground": hexToHsl(tokens.mutedForeground),
-    "--accent": hexToHsl(tokens.accent), "--accent-foreground": hexToHsl(tokens.foreground),
-    "--border": hexToHsl(tokens.border), "--input": hexToHsl(tokens.border), "--ring": hexToHsl(tokens.primary),
-    "--sidebar-background": hexToHsl(tokens.sidebar), "--sidebar-foreground": hexToHsl(tokens.foreground),
-    "--sidebar-primary": hexToHsl(tokens.primary), "--sidebar-primary-foreground": hexToHsl(tokens.primaryForeground),
-    "--sidebar-accent": hexToHsl(tokens.accent), "--sidebar-accent-foreground": hexToHsl(tokens.foreground),
-    "--sidebar-border": hexToHsl(tokens.border), "--sidebar-ring": hexToHsl(tokens.primary),
-    "--bg": tokens.background, "--surface": tokens.card, "--surface-2": tokens.muted,
-    "--ink": tokens.foreground, "--ink-2": tokens.mutedForeground, "--muted-ink": tokens.mutedForeground,
-    "--line": tokens.border, "--line-2": mixHex(tokens.border, tokens.foreground, 0.2),
-    "--hover": tokens.accent, "--violet": tokens.primary, "--violet-soft": tokens.accent, "--blue": tokens.primary,
-    "--theme-secondary": tokens.secondary,
-    "--theme-angle": `${tokens.angle}deg`,
-    "--theme-gradient": `linear-gradient(${tokens.angle}deg, ${tokens.primary}, ${tokens.secondary})`,
-    "--theme-gradient-soft": `linear-gradient(${tokens.angle}deg, ${mixHex(tokens.primary, tokens.background, 0.82)}, ${mixHex(tokens.secondary, tokens.background, 0.9)})`,
-  };
-  Object.entries(variables).forEach(([name, value]) => root.style.setProperty(name, value));
-}
-
-function readLocalPreference(): ThemePreference {
-  try {
-    const saved = normalizePreference(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"));
-    if (saved) return saved;
-    return localStorage.getItem(LEGACY_STORAGE_KEY) === "dark" ? "dark" : "light";
-  } catch {
-    return "light";
-  }
-}
-
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreference] = useState<ThemePreference>("light");
-
-  useEffect(() => { applyPreference(preference); }, [preference]);
 
   useEffect(() => {
-    let active = true;
-    const local = readLocalPreference();
-    setPreference(local);
-    applyPreference(local);
-    supabase.auth.getUser().then(({ data }) => {
-      if (!active) return;
-      const remote = normalizePreference(data.user?.user_metadata?.["theme_preference"]);
-      if (remote) {
-        setPreference(remote);
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(remote)); } catch { /* offline storage unavailable */ }
-      }
-    });
-    return () => { active = false; };
-  }, []);
+    const root = window.document.documentElement;
+    
+    // Alisin ang lumang classes para iwas conflict
+    root.classList.remove("light", "dark");
 
-  const setTheme = useCallback(async (next: ThemePreference) => {
-    const valid = normalizePreference(next);
-    if (!valid) return;
-    setPreference(valid);
-    applyPreference(valid);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(valid)); } catch { /* offline storage unavailable */ }
-    const { data } = await supabase.auth.getSession();
-    if (data.session) {
-      const { error } = await supabase.auth.updateUser({ data: { theme_preference: valid } });
-      if (error) throw error;
+    if (theme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+      root.classList.add(systemTheme);
+      return;
     }
-  }, []);
 
-  const value = useMemo<ThemeContextValue>(() => ({
-    preference,
-    mode: typeof preference === "string" ? THEME_PRESETS[preference].tokens.mode : preference.mode,
-    setTheme,
-  }), [preference, setTheme]);
+    root.classList.add(theme);
+  }, [theme]);
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
-}
+  // Makinig sa pagbabago ng system theme settings ng user device
+  useEffect(() => {
+    if (theme !== "system") return;
 
-export function useTheme() {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => {
+      const root = window.document.documentElement;
+      root.classList.remove("light", "dark");
+      root.classList.add(mediaQuery.matches ? "dark" : "light");
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [theme]);
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => {
   const context = useContext(ThemeContext);
-  if (!context) throw new Error("useTheme must be used within ThemeProvider");
+  if (!context) throw new Error("useTheme must be used within a ThemeProvider");
   return context;
-}
+};
