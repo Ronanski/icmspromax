@@ -1,16 +1,23 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-const ThemeContext = createContext(undefined);
+type Theme = "light" | "dark" | "system";
 
-export const ThemeProvider = ({ children }) => {
-  const [theme, setThemeState] = useState(() => {
+interface ThemeContextType {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("app-theme") || "system";
+      return (localStorage.getItem("app-theme") as Theme) || "system";
     }
     return "system";
   });
 
-  const setTheme = (newTheme) => {
+  const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
     localStorage.setItem("app-theme", newTheme);
   };
