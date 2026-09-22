@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { supabase } from "@/integrations/supabase/client";
+import supabase from "@/lib/supabaseClient";
 
 export type ThemeMode = "light" | "dark";
 export type ThemePresetKey = "light" | "dark" | "midnight" | "emerald" | "amber";
@@ -119,7 +119,7 @@ function applyPreference(preference: ThemePreference) {
   const preset = typeof preference === "string" ? THEME_PRESETS[preference] : null;
   const tokens = preset?.tokens ?? customTokens(preference as CustomTheme);
   root.classList.toggle("dark", tokens.mode === "dark");
-  root.dataset["theme"] = typeof preference === "string" ? preference : "custom";
+  root.dataset.theme = typeof preference === "string" ? preference : "custom";
   const variables: Record<string, string> = {
     "--background": hexToHsl(tokens.background), "--foreground": hexToHsl(tokens.foreground),
     "--card": hexToHsl(tokens.card), "--card-foreground": hexToHsl(tokens.foreground),
@@ -145,7 +145,7 @@ function readLocalPreference(): ThemePreference {
   try {
     const saved = normalizePreference(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"));
     if (saved) return saved;
-    return localStorage.getItem(LEGACY_STORAGE_KEY) === "dark" ? "dark" : "light";
+    return localStorage.getItem(LEGACY_STORAGE_KEY) === "light" ? "light" : "dark";
   } catch {
     return "light";
   }
@@ -158,17 +158,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getUser().then(async ({ data }) => {
+    supabase.auth.getUser().then(({ data }) => {
       if (!active) return;
-      let remote = normalizePreference(data.user?.user_metadata?.["theme_preference"]);
-      if (data.user) {
-        const { data: profile } = await supabase
-          .from("user_profiles")
-          .select("theme_preference")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
-        remote = normalizePreference(profile?.theme_preference) ?? remote;
-      }
+      const remote = normalizePreference(data.user?.user_metadata?.theme_preference);
       if (remote) {
         setPreference(remote);
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(remote)); } catch { /* offline storage unavailable */ }
@@ -185,11 +177,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(valid)); } catch { /* offline storage unavailable */ }
     const { data } = await supabase.auth.getSession();
     if (data.session) {
-      const { error } = await supabase.from("user_profiles").upsert({
-        user_id: data.session.user.id,
-        theme_preference: valid,
-        updated_at: new Date().toISOString(),
-      });
+      const { error } = await supabase.auth.updateUser({ data: { theme_preference: valid } });
       if (error) throw error;
     }
   }, []);

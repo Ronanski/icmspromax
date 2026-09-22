@@ -1,6 +1,7 @@
 # ICMS Promax roadmap
 
 ## Done
+- Added five shift-friendly global themes plus a custom theme creator with account-wide persistence and offline fallback
 - Paginated every shared work-order table with current and total page labels
 - Limited the notification bell to Today's Focus, strictly separated corrective and preventive alerts, improved dark-mode readability, and added per-item/all unread controls
 - Removed the center information icons from the backlog key-metrics list
