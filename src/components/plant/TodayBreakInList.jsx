@@ -29,14 +29,13 @@ export default function TodayBreakInList({ orders, onOpen }) {
         {jobs.length ? (
           <div className="mini-list">
             {pageJobs.map(j => (
-              <button key={j.id} className="mini-list-item flex flex-col gap-1.5 p-3" onClick={() => onOpen(j)}>
+              <button key={j.id} className="mini-list-item flex flex-col gap-1 px-3 py-2" onClick={() => onOpen(j)}>
                 <div className="mini-top">
                   <strong>{j.wo_number}</strong>
                   <span className={`priority priority-${priorityClass(j)}`}><i/>{priorityLabel(j)}</span>
                 </div>
                 <span className="mini-desc text-xs font-normal leading-normal tracking-normal text-muted-foreground align-baseline">{j.description}</span>
-                <span className="mini-meta">{j.equipment_tag || 'No tag'} · {j.technician || 'Unassigned'}</span>
-                <div className="mt-2 mb-2"><StatusBadge status={j.status}/></div>
+                <div className="mt-1 leading-none"><StatusBadge status={j.status}/></div>
               </button>
             ))}
           </div>

@@ -367,7 +367,15 @@ export const formatShiftSummary = (orders, workspace, shiftDate) => {
   lines.push(`    • Break-Ins  : ${breakIns}`);
   lines.push('--------------------------------------------------');
   lines.push('');
-  const unitOrder = ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Common'];
+  // Keep the familiar plant order, then append every configured/custom unit
+  // present in the result set. The summary must never drop a work order just
+  // because its unit code is outside the original fixed Unit 1–4 list.
+  const preferredUnitOrder = [...units];
+  const resultUnits = [...new Set(shiftOrders.map(j => j.unit))];
+  const unitOrder = [
+    ...preferredUnitOrder.filter(unit => resultUnits.includes(unit)),
+    ...resultUnits.filter(unit => !preferredUnitOrder.includes(unit)).sort((a, b) => a.localeCompare(b)),
+  ];
   let printed = false;
   for (const unit of unitOrder) {
     const unitOrders = shiftOrders.filter(j => j.unit === unit);
