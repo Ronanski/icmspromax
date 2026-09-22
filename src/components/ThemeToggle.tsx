@@ -1,75 +1,84 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { Check, Moon, Palette, RotateCcw, SlidersHorizontal, Sun } from "lucide-react";
 
-type Theme = "light" | "dark" | "system";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { type CustomTheme, type ThemePresetKey, THEME_PRESETS, useTheme } from "@/context/ThemeContext";
 
-export function ThemeToggle() {
-  // 1. Kumuha ng initial theme nang direkta mula sa localStorage
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("app-theme") as Theme) || "system";
-    }
-    return "system";
-  });
+const DEFAULT_CUSTOM: CustomTheme = { primary: "#3b82a6", secondary: "#68a58e", background: "#151a20", card: "#1e252d", border: "#35404a", mode: "dark", angle: 135 };
+const COLOR_FIELDS: Array<[keyof Pick<CustomTheme, "primary" | "secondary" | "background" | "card" | "border">, string]> = [
+  ["primary", "Primary accent color"],
+  ["secondary", "Gradient end color"],
+  ["background", "Background base"],
+  ["card", "Card surface tone"],
+  ["border", "Border tone"],
+];
 
-  // 2. Patakbuhin ang pagpapalit ng class sa HTML document root nang direkta
+export default function ThemeToggle() {
+  const { preference, mode, setTheme } = useTheme();
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [custom, setCustom] = useState<CustomTheme>(typeof preference === "object" ? preference : DEFAULT_CUSTOM);
+
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
+    if (typeof preference === "object") setCustom(preference);
+  }, [preference]);
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-      root.classList.add(systemTheme);
-      return;
-    }
-
-    root.classList.add(theme);
-  }, [theme]);
-
-  // 3. Makinig sa system changes kung naka-system mode
-  useEffect(() => {
-    if (theme !== "system") return;
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = () => {
-      const root = window.document.documentElement;
-      root.classList.remove("light", "dark");
-      root.classList.add(mediaQuery.matches ? "dark" : "light");
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [theme]);
-
-  const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newTheme = e.target.value as Theme;
-    setThemeState(newTheme);
-    localStorage.setItem("app-theme", newTheme);
+  const choosePreset = async (key: ThemePresetKey) => {
+    try { await setTheme(key); } catch { /* local preference remains active */ }
   };
 
-  return (
-    <div className="flex items-center gap-2" style={{ padding: "4px" }}>
-      <label htmlFor="theme-select" className="text-sm font-medium text-foreground">
-        Theme:
-      </label>
-      <select
-        id="theme-select"
-        value={theme}
-        onChange={handleThemeChange}
-        className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer text-foreground"
-        style={{
-          border: "1px solid var(--border, #ccc)",
-          background: "var(--background, #fff)",
-          color: "var(--foreground, #000)",
-          borderRadius: "6px",
-          padding: "4px 8px"
-        }}
-      >
-        <option value="light">☀️ Light</option>
-        <option value="dark">🌙 Dark</option>
-        <option value="system">💻 System</option>
-      </select>
-    </div>
-  );
+  const saveCustom = async () => {
+    setSaving(true);
+    try { await setTheme(custom); setOpen(false); } finally { setSaving(false); }
+  };
+
+  const previewStyle = {
+    "--preview-primary": custom.primary,
+    "--preview-secondary": custom.secondary,
+    "--preview-background": custom.background,
+    "--preview-card": custom.card,
+    "--preview-border": custom.border,
+    "--preview-text": custom.mode === "dark" ? "#edf4f7" : "#17212b",
+    "--preview-angle": `${custom.angle}deg`,
+  } as CSSProperties;
+
+  return <>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="icon" aria-label="Choose color theme" title="Choose color theme" className="theme-trigger">
+          {mode === "dark" ? <Moon /> : <Sun />}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="theme-menu">
+        <DropdownMenuLabel className="theme-menu-label"><Palette /> Display theme</DropdownMenuLabel>
+        {Object.entries(THEME_PRESETS).map(([key, preset]) => <DropdownMenuItem key={key} onSelect={() => choosePreset(key as ThemePresetKey)} className="theme-option">
+          <span className="theme-swatches" aria-hidden="true" style={{ "--swatch-a": preset.tokens.primary, "--swatch-b": preset.tokens.secondary } as CSSProperties}><i/><i/><i/></span>
+          <span className="theme-option-copy"><strong>{preset.label}</strong><small>{preset.description}</small></span>
+          {preference === key && <Check className="theme-check"/>}
+        </DropdownMenuItem>)}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={(event) => { event.preventDefault(); setOpen(true); }} className="theme-custom-option"><SlidersHorizontal /> Custom Theme…</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="theme-dialog">
+        <DialogHeader><DialogTitle>Custom Theme</DialogTitle><DialogDescription>Build a clear, comfortable gradient for long shifts.</DialogDescription></DialogHeader>
+        <div className="theme-mode-row"><div><Label htmlFor="theme-mode">Background mode</Label><p>{custom.mode === "dark" ? "Dark surfaces" : "Light surfaces"}</p></div><Switch id="theme-mode" checked={custom.mode === "dark"} onCheckedChange={(checked) => setCustom((value) => ({ ...value, mode: checked ? "dark" : "light" }))}/></div>
+        <div className="theme-color-grid">
+          {COLOR_FIELDS.map(([field, label]) => <Label className="theme-color-field" key={field}><span>{label}</span><span className="theme-color-control"><Input type="color" value={custom[field]} onChange={(event) => setCustom((value) => ({ ...value, [field]: event.target.value }))}/><code>{custom[field]}</code></span></Label>)}
+        </div>
+        <Label className="theme-angle-field"><span>Gradient direction</span><span><Input type="range" min="0" max="180" step="5" value={custom.angle} onChange={(event) => setCustom((value) => ({ ...value, angle: Number(event.target.value) }))}/><code>{custom.angle}°</code></span></Label>
+        <div className="theme-preview" style={previewStyle}>
+          <span>LIVE PREVIEW</span><div><small>PLANT STATUS</small><h3>Shift overview</h3><p>Work orders and equipment health at a glance.</p><b>Review jobs</b></div>
+        </div>
+        <DialogFooter><Button variant="ghost" onClick={() => setCustom(DEFAULT_CUSTOM)}><RotateCcw/>Reset</Button><Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button onClick={saveCustom} disabled={saving}>{saving ? "Saving…" : "Apply theme"}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>;
 }
