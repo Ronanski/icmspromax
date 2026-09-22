@@ -1,4 +1,4 @@
-import React,{useCallback,useEffect,useMemo,useState} from 'react';
+import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {AlertTriangle,Bell,CalendarClock,CheckCheck,Mail,MailOpen,PackageMinus,UserPlus,Zap} from 'lucide-react';
 import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
 import supabase from '@/lib/supabaseClient';
@@ -8,9 +8,26 @@ const ICONS={critical:Zap,overdue:CalendarClock,aged:AlertTriangle,stock:Package
 const notificationDate=item=>{const raw=item?.updated_at||item?.created_at||item?.created_date||item?.planned_start||item?.planned_finish;const date=raw?new Date(raw):new Date();return Number.isNaN(date.getTime())?new Date():date;};
 const timeLabel=date=>new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Manila'}).format(date);
 
+// Read / unread state lives outside the component so switching tabs (Today's
+// Focus -> PM -> back) or remounting the bell keeps the acknowledgements that
+// are already known, instead of flashing every alert as unread again.
+const readCache={};
+// Keys the user just acted on. A database read that was already in flight must
+// never roll these back to their stale value.
+const pendingKeys=new Set();
+
 export default function NotificationCenter({orders=[],items=[],settings={},defaultCategory='corrective',onOpenJob,onGoToPM,onGoToItems}){
-  const [readMap,setReadMap]=useState({});
+  const [readMap,setReadMap]=useState(()=>({...readCache}));
   const [category,setCategory]=useState(defaultCategory);
+  const mounted=useRef(true);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
+  const applyRead=useCallback(updater=>{
+    setReadMap(previous=>{
+      const next=typeof updater==='function'?updater(previous):{...previous,...updater};
+      Object.assign(readCache,next);
+      return next;
+    });
+  },[]);
   const t=today();
   const notifications=useMemo(()=>{
     const cmOrders=orders.filter(j=>j.maintenance_type!=='PM'),pmOrders=orders.filter(j=>j.maintenance_type==='PM'),entries=[];
@@ -25,34 +42,61 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
 
   const signature=notifications.map(n=>n.id).join('|');
 
-  // Every alert is stored in the database, and the read / unread status is read
-  // back from the `is_read` column so it follows the account across devices.
+  // Alerts are stored once per `source_key`. Existing rows are never rewritten,
+  // so an acknowledged alert (is_read = true) stays read when the list is
+  // regenerated on navigation or refresh.
   const sync=useCallback(async()=>{
-    if(!notifications.length){setReadMap({});return;}
+    if(!notifications.length)return;
     try{
       const {data:auth}=await supabase.auth.getUser();
       const ownerId=auth?.user?.id;
       if(!ownerId)return;
-      const rows=notifications.map(n=>({owner_id:ownerId,source_key:n.id,category:n.category,type:n.type,title:n.title,detail:n.detail,event_at:n.date.toISOString()}));
-      await supabase.from('notifications').upsert(rows,{onConflict:'owner_id,source_key',ignoreDuplicates:true});
-      const {data,error}=await supabase.from('notifications').select('source_key,is_read').eq('owner_id',ownerId).in('source_key',notifications.map(n=>n.id));
-      if(error||!data)return;
-      setReadMap(Object.fromEntries(data.map(r=>[r.source_key,!!r.is_read])));
-    }catch{/* alerts still render; read status simply stays unknown */}
-  },[signature]); // eslint-disable-line react-hooks/exhaustive-deps
+      const keys=notifications.map(n=>n.id);
+      const {data:existing,error}=await supabase.from('notifications').select('source_key,is_read').eq('owner_id',ownerId).in('source_key',keys);
+      if(error)return;
+      const stored=new Map((existing||[]).map(r=>[r.source_key,!!r.is_read]));
+
+      // Only alerts that have never been stored are inserted. No update, no
+      // upsert — nothing can reset is_read back to false.
+      const missing=notifications.filter(n=>!stored.has(n.id));
+      if(missing.length){
+        const rows=missing.map(n=>({owner_id:ownerId,source_key:n.id,category:n.category,type:n.type,title:n.title,detail:n.detail,event_at:n.date.toISOString(),is_read:false}));
+        await supabase.from('notifications').insert(rows).select('source_key'); // duplicates from a parallel tab are ignored below
+        missing.forEach(n=>stored.set(n.id,false));
+      }
+
+      if(!mounted.current)return;
+      applyRead(previous=>{
+        const next={...previous};
+        stored.forEach((value,key)=>{
+          // A click that happened while this read was in flight wins.
+          if(pendingKeys.has(key))return;
+          next[key]=value||previous[key]===true;
+        });
+        return next;
+      });
+    }catch{/* alerts still render; read status simply stays as last known */}
+  },[signature,applyRead]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(()=>{sync();},[sync]);
 
   const setRead=useCallback(async(keys,value)=>{
     if(!keys.length)return;
-    setReadMap(previous=>{const next={...previous};keys.forEach(k=>{next[k]=value;});return next;});
+    keys.forEach(k=>pendingKeys.add(k));
+    applyRead(previous=>{const next={...previous};keys.forEach(k=>{next[k]=value;});return next;});
     try{
       const {data:auth}=await supabase.auth.getUser();
       const ownerId=auth?.user?.id;
       if(!ownerId)return;
-      await supabase.from('notifications').update({is_read:value,read_at:value?new Date().toISOString():null}).eq('owner_id',ownerId).in('source_key',keys);
-    }catch{/* ignore — next sync restores the stored value */}
-  },[]);
+      const {error}=await supabase.from('notifications').update({is_read:value,read_at:value?new Date().toISOString():null}).eq('owner_id',ownerId).in('source_key',keys);
+      if(error)throw error;
+    }catch{
+      // Write failed — drop the optimistic value so the next read shows truth.
+      applyRead(previous=>{const next={...previous};keys.forEach(k=>{delete next[k];});return next;});
+    }finally{
+      keys.forEach(k=>pendingKeys.delete(k));
+    }
+  },[applyRead]);
 
   const isRead=id=>readMap[id]===true;
   const unread=notifications.filter(n=>!isRead(n.id)).length;
