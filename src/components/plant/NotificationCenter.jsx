@@ -112,7 +112,6 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
 
       const patchDate = value ? new Date().toISOString() : null;
 
-      // Mag-map ng payload items para sa upsert
       const upsertPayload = keys.map(k => {
         const notifItem = notifications.find(n => n.id === k);
         return {
@@ -120,20 +119,23 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
           source_key: k,
           category: notifItem?.category || 'corrective',
           type: notifItem?.type || 'aged',
-          title: notifItem?.title || '',
+          title: notifItem?.title || 'Notification',
           detail: notifItem?.detail || '',
-          event_at: notifItem?.date || new Date().toISOString(),
+          event_at: notifItem?.date ? new Date(notifItem.date).toISOString() : new Date().toISOString(),
           is_read: value,
           read_at: patchDate
         };
       });
 
-      // Gamitin ang upsert para siguradong ma-save sa DB
       const { error } = await supabase
         .from('notifications')
         .upsert(upsertPayload, { onConflict: 'owner_id, source_key' });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase upsert error:', error);
+        throw error;
+      }
+
       keys.forEach(k => pendingKeys.delete(k));
       await fetchRows(ownerId);
     } catch (err) {
