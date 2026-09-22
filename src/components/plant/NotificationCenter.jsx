@@ -1,6 +1,7 @@
-import React,{useEffect,useMemo,useState} from 'react';
+import React,{useCallback,useEffect,useMemo,useState} from 'react';
 import {AlertTriangle,Bell,CalendarClock,CheckCheck,Mail,MailOpen,PackageMinus,UserPlus,Zap} from 'lucide-react';
 import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
+import supabase from '@/lib/supabaseClient';
 import {aged,lowStockItems,overduePMs,newAssignments,today} from '@/components/plant/plantUtils';
 
 const ICONS={critical:Zap,overdue:CalendarClock,aged:AlertTriangle,stock:PackageMinus,due:CalendarClock,assignment:UserPlus};
@@ -8,8 +9,7 @@ const notificationDate=item=>{const raw=item?.updated_at||item?.created_at||item
 const timeLabel=date=>new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Manila'}).format(date);
 
 export default function NotificationCenter({orders=[],items=[],settings={},defaultCategory='corrective',onOpenJob,onGoToPM,onGoToItems}){
-  const storageKey='icms-promax-read-notifications';
-  const [readIds,setReadIds]=useState(()=>{try{return new Set(JSON.parse(localStorage.getItem(storageKey)||'[]'));}catch{return new Set();}});
+  const [readMap,setReadMap]=useState({});
   const [category,setCategory]=useState(defaultCategory);
   const t=today();
   const notifications=useMemo(()=>{
@@ -22,18 +22,50 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
     if(settings.notify_assignments!==false)newAssignments(cmOrders).forEach(j=>entries.push({id:`assignment-${j.id}`,category:'corrective',type:'assignment',title:'Assigned work not started',detail:`${j.wo_number} · ${j.technician||'Assigned technician'}`,date:notificationDate(j),job:j,action:'Open work order'}));
     return entries.sort((a,b)=>b.date-a.date);
   },[orders,items,settings,t]);
-  useEffect(()=>{try{localStorage.setItem(storageKey,JSON.stringify([...readIds]));}catch{}},[readIds]);
-  const unread=notifications.filter(n=>!readIds.has(n.id)).length;
+
+  const signature=notifications.map(n=>n.id).join('|');
+
+  // Every alert is stored in the database, and the read / unread status is read
+  // back from the `is_read` column so it follows the account across devices.
+  const sync=useCallback(async()=>{
+    if(!notifications.length){setReadMap({});return;}
+    try{
+      const {data:auth}=await supabase.auth.getUser();
+      const ownerId=auth?.user?.id;
+      if(!ownerId)return;
+      const rows=notifications.map(n=>({owner_id:ownerId,source_key:n.id,category:n.category,type:n.type,title:n.title,detail:n.detail,event_at:n.date.toISOString()}));
+      await supabase.from('notifications').upsert(rows,{onConflict:'owner_id,source_key',ignoreDuplicates:true});
+      const {data,error}=await supabase.from('notifications').select('source_key,is_read').eq('owner_id',ownerId).in('source_key',notifications.map(n=>n.id));
+      if(error||!data)return;
+      setReadMap(Object.fromEntries(data.map(r=>[r.source_key,!!r.is_read])));
+    }catch{/* alerts still render; read status simply stays unknown */}
+  },[signature]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(()=>{sync();},[sync]);
+
+  const setRead=useCallback(async(keys,value)=>{
+    if(!keys.length)return;
+    setReadMap(previous=>{const next={...previous};keys.forEach(k=>{next[k]=value;});return next;});
+    try{
+      const {data:auth}=await supabase.auth.getUser();
+      const ownerId=auth?.user?.id;
+      if(!ownerId)return;
+      await supabase.from('notifications').update({is_read:value,read_at:value?new Date().toISOString():null}).eq('owner_id',ownerId).in('source_key',keys);
+    }catch{/* ignore — next sync restores the stored value */}
+  },[]);
+
+  const isRead=id=>readMap[id]===true;
+  const unread=notifications.filter(n=>!isRead(n.id)).length;
   const visibleNotifications=notifications.filter(n=>n.category===category);
-  const categoryUnread=visibleNotifications.filter(n=>!readIds.has(n.id)).length;
-  const markRead=id=>setReadIds(previous=>new Set([...previous,id]));
-  const markUnread=id=>setReadIds(previous=>{const next=new Set(previous);next.delete(id);return next;});
-  const markAllRead=()=>setReadIds(previous=>new Set([...previous,...visibleNotifications.map(n=>n.id)]));
-  const markAllUnread=()=>setReadIds(previous=>{const next=new Set(previous);visibleNotifications.forEach(n=>next.delete(n.id));return next;});
+  const categoryUnread=visibleNotifications.filter(n=>!isRead(n.id)).length;
+  const markRead=id=>setRead([id],true);
+  const markUnread=id=>setRead([id],false);
+  const markAllRead=()=>setRead(visibleNotifications.filter(n=>!isRead(n.id)).map(n=>n.id),true);
+  const markAllUnread=()=>setRead(visibleNotifications.filter(n=>isRead(n.id)).map(n=>n.id),false);
   const openNotification=n=>{markRead(n.id);if(n.goItems)onGoToItems?.();else if(n.job)onOpenJob?.(n.job);else if(n.type==='due'||n.type==='overdue')onGoToPM?.();};
   return <Popover><PopoverTrigger asChild><button type="button" className="secondary-button notification-trigger" aria-label={`${unread} unread notifications`} title="Notifications"><Bell size={16}/><span>Notifications</span>{unread>0&&<b>{unread>99?'99+':unread}</b>}</button></PopoverTrigger><PopoverContent align="end" sideOffset={8} className="notification-popover">
-    <div className="notification-head"><div><strong>Notifications</strong><span>{unread} unread across all work orders</span></div><div className="notification-bulk-actions"><button type="button" onClick={markAllRead} disabled={!categoryUnread}><CheckCheck size={14}/>Mark all as read</button><button type="button" onClick={markAllUnread} disabled={!visibleNotifications.some(n=>readIds.has(n.id))}><Mail size={14}/>Mark all as unread</button></div></div>
-    <div className="notification-categories" role="tablist" aria-label="Notification type"><button type="button" role="tab" aria-selected={category==='corrective'} className={category==='corrective'?'active':''} onClick={()=>setCategory('corrective')}>Corrective <b>{notifications.filter(n=>n.category==='corrective'&&!readIds.has(n.id)).length}</b></button><button type="button" role="tab" aria-selected={category==='preventive'} className={category==='preventive'?'active':''} onClick={()=>setCategory('preventive')}>Preventive <b>{notifications.filter(n=>n.category==='preventive'&&!readIds.has(n.id)).length}</b></button></div>
-    <div className="notification-list">{visibleNotifications.length?visibleNotifications.map(n=>{const Icon=ICONS[n.type]||Bell,isRead=readIds.has(n.id);return <article key={n.id} className={`notification-item ${n.type} ${isRead?'read':'unread'}`}><button type="button" className="notification-main" onClick={()=>openNotification(n)}><span className="notification-type-icon"><Icon size={16}/></span><span className="notification-copy"><strong>{n.title}</strong><span>{n.detail}</span><time dateTime={n.date.toISOString()}>{timeLabel(n.date)}</time></span>{!isRead&&<i aria-label="Unread"/>}</button><div className="notification-actions"><button type="button" onClick={()=>openNotification(n)}>{n.action}</button>{isRead?<button type="button" onClick={()=>markUnread(n.id)}><MailOpen size={13}/>Mark as unread</button>:<button type="button" onClick={()=>markRead(n.id)}><CheckCheck size={13}/>Acknowledge</button>}</div></article>}):<div className="notification-empty"><Bell size={24}/><strong>All clear</strong><span>No {category} work order alerts.</span></div>}</div>
+    <div className="notification-head"><div><strong>Notifications</strong><span>{unread} unread across all work orders</span></div><div className="notification-bulk-actions"><button type="button" onClick={markAllRead} disabled={!categoryUnread}><CheckCheck size={14}/>Mark all as read</button><button type="button" onClick={markAllUnread} disabled={!visibleNotifications.some(n=>isRead(n.id))}><Mail size={14}/>Mark all as unread</button></div></div>
+    <div className="notification-categories" role="tablist" aria-label="Notification type"><button type="button" role="tab" aria-selected={category==='corrective'} className={category==='corrective'?'active':''} onClick={()=>setCategory('corrective')}>Corrective <b>{notifications.filter(n=>n.category==='corrective'&&!isRead(n.id)).length}</b></button><button type="button" role="tab" aria-selected={category==='preventive'} className={category==='preventive'?'active':''} onClick={()=>setCategory('preventive')}>Preventive <b>{notifications.filter(n=>n.category==='preventive'&&!isRead(n.id)).length}</b></button></div>
+    <div className="notification-list">{visibleNotifications.length?visibleNotifications.map(n=>{const Icon=ICONS[n.type]||Bell,read=isRead(n.id);return <article key={n.id} className={`notification-item ${n.type} ${read?'read':'unread'}`}><button type="button" className="notification-main" onClick={()=>openNotification(n)}><span className="notification-type-icon"><Icon size={16}/></span><span className="notification-copy"><strong>{n.title}</strong><span>{n.detail}</span><time dateTime={n.date.toISOString()}>{timeLabel(n.date)}</time></span>{!read&&<i aria-label="Unread"/>}</button><div className="notification-actions"><button type="button" onClick={()=>openNotification(n)}>{n.action}</button>{read?<button type="button" onClick={()=>markUnread(n.id)}><MailOpen size={13}/>Mark as unread</button>:<button type="button" onClick={()=>markRead(n.id)}><CheckCheck size={13}/>Acknowledge</button>}</div></article>}):<div className="notification-empty"><Bell size={24}/><strong>All clear</strong><span>No {category} work order alerts.</span></div>}</div>
   </PopoverContent></Popover>;
 }

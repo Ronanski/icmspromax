@@ -21,3 +21,4 @@
 - New table: alert_settings (grants + RLS included)
 - Roles table so admin checks are enforced by RLS, not only workspace ownership
 
+- New table: notifications (is_read, RLS + grants) — powers the notification bell read/unread sync

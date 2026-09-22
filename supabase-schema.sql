@@ -202,3 +202,48 @@ begin
   end loop;
 end $$;
 
+
+-- ---------------------------------------------------------- notifications
+-- Alerts shown in the Notification Center. Read / unread lives in `is_read`
+-- so acknowledgements persist per account across devices and browsers.
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  source_key text not null,
+  category text not null default 'corrective' check (category in ('corrective','preventive')),
+  type text not null default 'aged',
+  title text not null default '',
+  detail text not null default '',
+  event_at timestamptz not null default now(),
+  is_read boolean not null default false,
+  read_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (owner_id, source_key)
+);
+
+alter table public.notifications add column if not exists is_read boolean not null default false;
+alter table public.notifications add column if not exists read_at timestamptz;
+
+create index if not exists notifications_owner_unread_idx
+  on public.notifications (owner_id, is_read);
+
+grant select, insert, update, delete on public.notifications to authenticated;
+grant all on public.notifications to service_role;
+
+alter table public.notifications enable row level security;
+
+drop policy if exists "Users read own notifications" on public.notifications;
+create policy "Users read own notifications" on public.notifications
+  for select to authenticated using (auth.uid() = owner_id);
+
+drop policy if exists "Users create own notifications" on public.notifications;
+create policy "Users create own notifications" on public.notifications
+  for insert to authenticated with check (auth.uid() = owner_id);
+
+drop policy if exists "Users update own notifications" on public.notifications;
+create policy "Users update own notifications" on public.notifications
+  for update to authenticated using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+
+drop policy if exists "Users delete own notifications" on public.notifications;
+create policy "Users delete own notifications" on public.notifications
+  for delete to authenticated using (auth.uid() = owner_id);

@@ -319,7 +319,13 @@ const normDate = v => {
 
 const val = (v, fb) => { const s = (v === null || v === undefined) ? '' : String(v).trim(); return s && s !== 'null' && s !== 'undefined' ? s : fb; };
 
-export const formatShiftSummary = (orders, workspace, shiftDate) => {
+export const formatShiftSummary = (orders, workspace, shiftDate, scope = 'cm') => {
+  const scopeTitle = scope === 'pm' ? 'PREVENTIVE MAINTENANCE (PM) SHIFT REPORT'
+    : scope === 'breakin' ? 'BREAK-IN SHIFT REPORT'
+    : 'CORRECTIVE MAINTENANCE (CM) SHIFT REPORT';
+  const scopeMatch = j => scope === 'pm' ? j.maintenance_type === 'PM'
+    : scope === 'breakin' ? j.job_type === 'Break-In'
+    : j.maintenance_type !== 'PM';
   const target = normDate(shiftDate) || today();
   const date = safeFormatDate(target, 'MMMM dd, yyyy');
   const executedStatuses = ['In-Progress', 'Completed', 'Deferred'];
@@ -339,7 +345,7 @@ export const formatShiftSummary = (orders, workspace, shiftDate) => {
     if (j.start_time && localDateStr(j.start_time) === target) return true;
     return localDateStr(j.planned_start) === target;
   };
-  let shiftOrders = orders.filter(matchDate);
+  let shiftOrders = orders.filter(scopeMatch).filter(matchDate);
   shiftOrders = shiftOrders.filter(j => executedStatuses.includes(j.status));
   shiftOrders = shiftOrders.map(j => ({
     ...j,
@@ -356,7 +362,7 @@ export const formatShiftSummary = (orders, workspace, shiftDate) => {
   const breakIns = shiftOrders.filter(j => j.job_type === 'Break-In').length;
   const lines = [];
   lines.push('--------------------------------------------------');
-  lines.push('ICMS DAILY ACCOMPLISHMENT REPORT');
+  lines.push(`ICMS DAILY ACCOMPLISHMENT REPORT — ${scopeTitle}`);
   lines.push(`Date: ${date}`);
   lines.push('Plant: I&C Maintenance');
   lines.push('--------------------------------------------------');
@@ -364,7 +370,7 @@ export const formatShiftSummary = (orders, workspace, shiftDate) => {
   lines.push(`    • In Progress: ${inProgress}`);
   lines.push(`    • Completed  : ${completed}`);
   lines.push(`    • Deferred   : ${deferred}`);
-  lines.push(`    • Break-Ins  : ${breakIns}`);
+  if (scope !== 'pm') lines.push(`    • Break-Ins  : ${breakIns}`);
   lines.push('--------------------------------------------------');
   lines.push('');
   // Keep the familiar plant order, then append every configured/custom unit
@@ -403,7 +409,7 @@ export const formatShiftSummary = (orders, workspace, shiftDate) => {
     }
   }
   if (!printed) {
-    lines.push('No work orders found for the selected date.');
+    lines.push(`No ${scope === 'pm' ? 'preventive maintenance' : scope === 'breakin' ? 'break-in' : 'corrective maintenance'} work orders found for the selected date.`);
     lines.push('--------------------------------------------------');
   }
   return lines.join('\n');
