@@ -47,7 +47,7 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
   // The database is the single source of truth. Alerts generated from work
   // orders are cross-referenced by `source_key`; existing rows are never
   // rewritten, so is_read = true survives every reload and navigation.
-  const fetchRows = useCallback(async (ownerId) => {
+const fetchRows = useCallback(async (ownerId) => {
     if (!ownerId) return;
     try {
       const { data, error } = await supabase
