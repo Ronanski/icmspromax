@@ -10,7 +10,6 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Kunin ang dating sineb na theme o default sa 'system'
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("app-theme") as Theme) || "system";
@@ -25,8 +24,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     const root = window.document.documentElement;
-    
-    // Alisin ang lumang classes para iwas conflict
     root.classList.remove("light", "dark");
 
     if (theme === "system") {
@@ -40,7 +37,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.classList.add(theme);
   }, [theme]);
 
-  // Makinig sa pagbabago ng system theme settings ng user device
   useEffect(() => {
     if (theme !== "system") return;
 
