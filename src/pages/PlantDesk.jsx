@@ -10,14 +10,12 @@ import PMAnalytics from '../components/plant/PMAnalytics';
 import ItemMasterPage from '../components/plant/ItemMasterPage';
 import SystemRegistryPage from '../components/plant/SystemRegistryPage';
 import ShiftHandoverPage from '../components/plant/ShiftHandoverPage';
-import NotificationCenter from '../components/plant/NotificationCenter';
 
 export default function PlantDesk() {
   const [activeTab, setActiveTab] = useState('focus');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [orders, setOrders] = useState([]);
 
-  // Function para mag-render ng babagay na pahina batay sa napiling tab
   const renderTabContent = () => {
     switch (activeTab) {
       case 'focus':
@@ -54,7 +52,6 @@ export default function PlantDesk() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
-      {/* 1. Sidebar Component (May Mobile Open/Close controls) */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -62,14 +59,11 @@ export default function PlantDesk() {
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      {/* 2. Right Side Main Content Wrapper */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Topbar na may Hamburger Menu Button */}
         <Topbar
           onToggleSidebar={() => setIsSidebarOpen(true)}
         />
 
-        {/* Dynamic Page Workspace */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-6">
           {renderTabContent()}
         </main>
