@@ -92,7 +92,6 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
     });
 
     try {
-      // Get User ID from Session or Work Orders
       const { data: auth } = await supabase.auth.getUser();
       const ownerId = auth?.user?.id || orders[0]?.owner_id;
 
@@ -103,23 +102,23 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
 
       const isoNow = new Date().toISOString();
 
-      // Payload Construction
+      // Payload with both 'detail' and 'message' to satisfy database constraints
       const upsertPayload = keys.map(k => {
         const notifItem = notifications.find(n => n.id === k);
+        const detailText = String(notifItem?.detail || '');
         return {
           owner_id: ownerId,
           source_key: String(k),
           category: notifItem?.category || 'corrective',
           type: notifItem?.type || 'aged',
           title: String(notifItem?.title || 'Notification'),
-          detail: String(notifItem?.detail || ''),
+          detail: detailText,
+          message: detailText,
           event_at: notifItem?.date ? new Date(notifItem.date).toISOString() : isoNow,
           is_read: Boolean(value),
           read_at: value ? isoNow : null
         };
       });
-
-      console.log('Sending Payload to Supabase:', upsertPayload);
 
       // Upsert Query
       const { data, error } = await supabase
@@ -130,7 +129,6 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
       if (error) {
         console.error('SUPABASE UPSERT ERROR DETAILS:', error);
       } else {
-        console.log('SUCCESSFULLY SAVED TO SUPABASE:', data);
         await fetchRows();
       }
     } catch (err) {
