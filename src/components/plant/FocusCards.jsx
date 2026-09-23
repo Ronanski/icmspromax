@@ -8,8 +8,8 @@ const DONE_STATUSES = ['Completed', 'Done'];
 export default function FocusCards({ orders, onOpen, onCreate, onView }) {
   const t = today();
   const isDone = j => DONE_STATUSES.includes(j.status);
-  // STRICT date rule: only planned_start or created_date on today's exact local
-  // date count. Past/future scheduled orders are never shown or counted here.
+  // PlantDesk supplies today's set; keep this guard so this view can never show
+  // or count a past/future order if it is reused with an unfiltered list.
   const isBreakIn = j => j._table === 'breakin_orders' || j.job_type === 'Break-In';
   const todays = (orders || []).filter(j => isTodayJob(j, t));
   // Work orders dated today (Open, In-Progress, Deferred, Completed), highest priority first

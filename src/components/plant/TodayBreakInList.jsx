@@ -11,7 +11,7 @@ export default function TodayBreakInList({ orders, onOpen }) {
   const [page, setPage] = useState(0);
   const t = today();
   const jobs = useMemo(() => (orders || [])
-    // STRICT: only planned_start or created_date on today's exact local date.
+    // Keep an internal strict-date guard even though PlantDesk supplies today's set.
     .filter(j => (j._table === 'breakin_orders' || j.job_type === 'Break-In') && isTodayJob(j, t))
     .sort((a, b) => (PRIO_ORDER[effectivePriority(a)] ?? 5) - (PRIO_ORDER[effectivePriority(b)] ?? 5)),
     [orders, t]);

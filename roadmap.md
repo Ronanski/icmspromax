@@ -1,6 +1,7 @@
 # ICMS Promax roadmap
 
 ## Done
+- Corrected Today's Focus date precedence so newly created past/future CM and break-in orders are excluded from queues and counters
 - Added five shift-friendly global themes plus a custom theme creator with account-wide persistence and offline fallback
 - Paginated every shared work-order table with current and total page labels
 - Limited the notification bell to Today's Focus, strictly separated corrective and preventive alerts, improved dark-mode readability, and added per-item/all unread controls

@@ -13,11 +13,13 @@ export const localDay = (v) => {
   return isNaN(dt.getTime()) ? s.slice(0, 10) : format(dt, 'yyyy-MM-dd');
 };
 
-// STRICT today rule: a job belongs to Today's Focus only when its planned_start
-// or created_date falls exactly on today's local date. Past and future dated
-// jobs stay in the Work Orders table / Work Calendar.
-export const isTodayJob = (j, t = today()) =>
-  localDay(j?.planned_start) === t || localDay(j?.created_date) === t;
+// STRICT today rule: planned work is matched only by its planned date. The
+// creation date is a fallback for genuinely unscheduled work, so creating a
+// past/future order today cannot make it leak into Today's Focus.
+export const isTodayJob = (j, t = today()) => {
+  const plannedDay = localDay(j?.planned_start);
+  return plannedDay ? plannedDay === t : localDay(j?.created_date) === t;
+};
 
 // Official Plant Priority SLA Matrix — aged days threshold per priority
 export const SLA_THRESHOLDS = { 'Critical': 0, 'High': 4, 'Medium': 15, 'Low': 45, 'Shutdown Item': null };
