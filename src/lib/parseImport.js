@@ -347,13 +347,12 @@ function parsePlantImport({ content, section }) {
   });
 
   // Strict section separation: one wrong work type blocks the whole file.
+  // PM, CM and Break-In imports must never cross-contaminate each other's registers.
   if (rejected.length) {
     const found = [...new Set(rejected.map((x) => x.found))].join(", ");
-    const rows = rejected.slice(0, 5).map((x) => x.wo_number || `row ${x.row}`).join(", ");
     throw Error(
-      `${sectionLabel} import blocked: ${rejected.length} row${rejected.length > 1 ? "s" : ""} have Work Type "${found}". ` +
-      `Only ${sectionLabel} rows can be imported here (${rows}${rejected.length > 5 ? ", …" : ""}). ` +
-      `Import those rows from their own section instead.`
+      `Invalid File: Non-${sectionLabel} work orders detected (${found}). ` +
+      `Please upload ${sectionLabel} orders only.`
     );
   }
 

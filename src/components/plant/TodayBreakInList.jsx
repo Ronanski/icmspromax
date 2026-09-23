@@ -12,7 +12,8 @@ export default function TodayBreakInList({ orders, onOpen }) {
   const t = today();
   const d = v => (v ? String(v).slice(0, 10) : '');
   const jobs = useMemo(() => orders
-    .filter(j => j._table === 'breakin_orders' && (d(j.planned_start) === t || d(j.start_time) === t || d(j.created_date) === t || d(j.completion_time) === t))
+    // STRICT: only planned_start or created_date on today's exact local date.
+    .filter(j => j._table === 'breakin_orders' && (d(j.planned_start) === t || d(j.created_date) === t))
     .sort((a, b) => (PRIO_ORDER[effectivePriority(a)] ?? 5) - (PRIO_ORDER[effectivePriority(b)] ?? 5)),
     [orders, t]);
   const pageCount = Math.max(1, Math.ceil(jobs.length / PAGE));

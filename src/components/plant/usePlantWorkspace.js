@@ -44,5 +44,15 @@ export default function usePlantWorkspace() {
   };
  },[wsId]);
 
-   return {user,workspaces,workspace,orders,systems,items,loading,error,refresh,refreshSettings,chooseWorkspace:id=>setWorkspace(workspaces.find(w=>w.id===id)),admin:workspace?.owner_id===user?.id,profileName};
+   // Exact sidebar badge counts, read straight from each physical table (never cross-mixed).
+   const [tableCounts,setTableCounts]=useState({pm_orders:null,cm_orders:null,breakin_orders:null});
+   useEffect(()=>{
+    if(!wsId){setTableCounts({pm_orders:null,cm_orders:null,breakin_orders:null});return;}
+    let live=true;
+    Promise.all(['pm_orders','cm_orders','breakin_orders'].map(t=>supabase.from(t).select('id',{count:'exact',head:true}).eq('workspace_id',wsId).then(({count,error})=>[t,error?null:count])))
+     .then(entries=>{if(live)setTableCounts(Object.fromEntries(entries));}).catch(()=>{});
+    return()=>{live=false;};
+   },[wsId,orders]);
+
+   return {tableCounts,user,workspaces,workspace,orders,systems,items,loading,error,refresh,refreshSettings,chooseWorkspace:id=>setWorkspace(workspaces.find(w=>w.id===id)),admin:workspace?.owner_id===user?.id,profileName};
 }

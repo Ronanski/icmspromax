@@ -8,9 +8,10 @@ const DONE_STATUSES = ['Completed', 'Done'];
 export default function FocusCards({ orders, onOpen, onCreate, onView }) {
   const t = today();
   const isDone = j => DONE_STATUSES.includes(j.status);
-  // Strict local-date match: only records dated today count, whatever their status.
+  // STRICT date rule: only planned_start or created_date on today's exact local
+  // date count. Past/future scheduled orders are never shown or counted here.
   const d = v => (v ? String(v).slice(0, 10) : '');
-  const isToday = j => d(j.planned_start) === t || d(j.start_time) === t || d(j.created_date) === t || d(j.completion_time) === t;
+  const isToday = j => d(j.planned_start) === t || d(j.created_date) === t;
   const todays = orders.filter(isToday);
   // Work orders dated today (Open, In-Progress, Deferred, Completed), highest priority first
   const jobs = todays

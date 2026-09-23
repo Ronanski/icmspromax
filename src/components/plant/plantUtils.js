@@ -148,31 +148,33 @@ const yesNo = (v) => (v ? 'Yes' : 'No');
 // Every job order detail, in a column order the importer recognises, so an
 // export → import round trip never loses a field.
 export const FULL_ORDER_COLUMNS = [
+  // Standard + execution fields first, in the agreed order.
   ['WO Number', j => j.wo_number],
   ['Description', j => j.description],
-  ['Equipment Tag', j => j.equipment_tag],
   ['Unit', j => j.unit],
-  ['System', j => j.system],
+  ['System (Location/Tag)', j => j.system],
+  ['Status', j => j.status],
   ['Priority', j => j.priority],
+  ['Action Taken', j => j.action_taken],
+  ['As Found', j => j.as_found],
+  ['As Left', j => j.as_left],
+  ['PTW Number', j => j.ptw_number],
+  ['Assigned Manpower', j => j.technician],
+  // Supporting detail.
+  ['Equipment Tag', j => j.equipment_tag],
   ['Priority Category', j => priorityLabel(j)],
   ['Job Type', j => j.job_type],
   ['Maintenance Type', j => j.maintenance_type || 'CM'],
   ['PM Frequency', j => j.pm_frequency],
   ['Shutdown Item', j => yesNo(j.shutdown_item)],
-  ['Status', j => j.status],
-  ['Assigned Manpower', j => j.technician],
   ['Planned Start', j => j.planned_start],
   ['Planned Finish', j => j.planned_finish],
   ['Actual Start', j => j.start_time],
   ['Completion Time', j => j.completion_time],
-  ['PTW Number', j => j.ptw_number],
   ['Ex-BreakIn', j => yesNo(j.ex_breakin)],
   ['Associated WO', j => j.associated_wo],
   ['Deferred Reason', j => j.deferred_reason],
   ['PR Number', j => j.pr_number],
-  ['Action Taken', j => j.action_taken],
-  ['As Found', j => j.as_found],
-  ['As Left', j => j.as_left],
   ['Materials', j => materialsCell(j.materials)],
   ['Overdue Days', j => overdueDays(j) || ''],
   ['Created Date', j => (j.created_date || '').slice(0, 10)],
@@ -184,7 +186,7 @@ const fullRows = (orders) => (orders || []).filter(Boolean).map(j => FULL_ORDER_
 const fullHeaders = () => FULL_ORDER_COLUMNS.map(([label]) => label);
 
 export const exportBreakInsCSV = (orders) => {
-  const breakIns = (orders || []).filter(j => j && j.job_type === 'Break-In');
+  const breakIns = (orders || []).filter(j => j && (j._table ? j._table === 'breakin_orders' : j.job_type === 'Break-In'));
   if (!breakIns.length) return 0;
   return downloadCSV(`break-ins-${today()}.csv`, fullHeaders(), fullRows(breakIns));
 };
@@ -246,7 +248,7 @@ export const exportSystemsCSV = (systems) => downloadCSV(
 export const exportPMCSV = (orders) => downloadCSV(
   `pm-schedule-${today()}.csv`,
   fullHeaders(),
-  fullRows((orders || []).filter(j => j && j.maintenance_type === 'PM')),
+  fullRows((orders || []).filter(j => j && (j._table ? j._table === 'pm_orders' : j.maintenance_type === 'PM'))),
 );
 
 // Active backlog = Open + In-Progress + Pending Parts (not yet completed/deferred/cancelled)

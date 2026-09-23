@@ -65,7 +65,7 @@ export default function PlantDesk(){
   const filtered=useMemo(()=>{
     let r=cmOrders;
     if(filters.search||search)r=r.filter(j=>{const q=(filters.search||search).toLowerCase();return j.wo_number?.toLowerCase().includes(q)||j.description?.toLowerCase().includes(q)||j.equipment_tag?.toLowerCase().includes(q)||j.technician?.toLowerCase().includes(q);});
-    if(filters.today){const t=today(),d=v=>v?String(v).slice(0,10):'';r=r.filter(j=>d(j.planned_start)===t||d(j.start_time)===t||d(j.created_date)===t||d(j.completion_time)===t);}
+    if(filters.today){const t=today(),d=v=>v?String(v).slice(0,10):'';r=r.filter(j=>d(j.planned_start)===t||d(j.created_date)===t);}
     if(filters.system)r=r.filter(j=>j.system===filters.system);
     if(filters.unit)r=r.filter(j=>j.unit===filters.unit);
     if(filters.job_type)r=r.filter(j=>j.job_type===filters.job_type);
@@ -155,7 +155,7 @@ export default function PlantDesk(){
   const systemOptions=ws.systems&&ws.systems.length?[...new Set(ws.systems.map(s=>s.system_name).filter(Boolean))]:[];
 
   return <div className="plant-shell">
-    <Sidebar tab={tab} onTab={setTab} workspaces={ws.workspaces} workspace={ws.workspace} onWorkspace={ws.chooseWorkspace} user={ws.user} admin={ws.admin} open={sidebarOpen} onClose={()=>setSidebarOpen(false)} count={cmOnlyCount} pmCount={pmOrders.length} breakInCount={allBreakInCount} onProfile={ws.admin?()=>setProfileOpen(true):undefined} profileName={ws.profileName} workspaceMode={workspaceMode} onSwitchMode={m=>{setWorkspaceMode(m);setFilters({});setTab(m==='pm'?'pmfocus':'focus');}}/>
+    <Sidebar tab={tab} onTab={setTab} workspaces={ws.workspaces} workspace={ws.workspace} onWorkspace={ws.chooseWorkspace} user={ws.user} admin={ws.admin} open={sidebarOpen} onClose={()=>setSidebarOpen(false)} count={ws.tableCounts?.cm_orders??cmOnlyCount} pmCount={ws.tableCounts?.pm_orders??pmOrders.length} breakInCount={ws.tableCounts?.breakin_orders??allBreakInCount} onProfile={ws.admin?()=>setProfileOpen(true):undefined} profileName={ws.profileName} workspaceMode={workspaceMode} onSwitchMode={m=>{setWorkspaceMode(m);setFilters({});setTab(m==='pm'?'pmfocus':'focus');}}/>
     <div className={`plant-main ${sidebarOpen?'':'sidebar-hidden'}`}>
       <Topbar title={titles[tab]} onMenu={()=>setSidebarOpen(v=>!v)} search={search} onSearch={setSearch} onTab={setTab} clockFormat={ws.workspace?.clock_format||'12'}/>
       <div className="plant-content">

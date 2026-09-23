@@ -14,56 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      alert_settings: {
-        Row: {
-          created_date: string
-          id: string
-          low_stock_threshold: number | null
-          notify_assignments: boolean | null
-          notify_low_stock: boolean | null
-          notify_overdue_pm: boolean | null
-          overdue_pm_days: number | null
-          owner_id: string
-          settings: Json | null
-          updated_date: string
-          workspace_id: string
-        }
-        Insert: {
-          created_date?: string
-          id?: string
-          low_stock_threshold?: number | null
-          notify_assignments?: boolean | null
-          notify_low_stock?: boolean | null
-          notify_overdue_pm?: boolean | null
-          overdue_pm_days?: number | null
-          owner_id: string
-          settings?: Json | null
-          updated_date?: string
-          workspace_id: string
-        }
-        Update: {
-          created_date?: string
-          id?: string
-          low_stock_threshold?: number | null
-          notify_assignments?: boolean | null
-          notify_low_stock?: boolean | null
-          notify_overdue_pm?: boolean | null
-          overdue_pm_days?: number | null
-          owner_id?: string
-          settings?: Json | null
-          updated_date?: string
-          workspace_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "alert_settings_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       breakin_orders: {
         Row: {
           action_taken: string | null
@@ -575,36 +525,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      user_profiles: {
-        Row: {
-          designation: string
-          full_name: string
-          plant_role: string
-          shift: string
-          theme_preference: Json | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          designation?: string
-          full_name?: string
-          plant_role?: string
-          shift?: string
-          theme_preference?: Json | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          designation?: string
-          full_name?: string
-          plant_role?: string
-          shift?: string
-          theme_preference?: Json | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       workspaces: {
         Row: {
