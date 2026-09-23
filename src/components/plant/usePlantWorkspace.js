@@ -21,9 +21,9 @@ export default function usePlantWorkspace() {
    timer.current=setTimeout(()=>{if(live)api('list',{workspace_id:wsId}).then(r=>{if(live)setOrders(r.orders);}).catch(()=>{});},350);
   };
   const channel=supabase.channel(`plant-live-${wsId}`);
-  ['work_orders','system_registry','item_master'].forEach(table=>{
+  ['pm_orders','cm_orders','breakin_orders','system_registry','item_master'].forEach(table=>{
    channel.on('postgres_changes',{event:'*',schema:'public',table,filter:`workspace_id=eq.${wsId}`},()=>{
-    if(table==='work_orders')pull();
+    if(table==='pm_orders'||table==='cm_orders'||table==='breakin_orders')pull();
     else if(table==='system_registry')api('listSystems',{workspace_id:wsId}).then(r=>{if(live)setSystems(r.systems);}).catch(()=>{});
     else api('listItems',{workspace_id:wsId}).then(r=>{if(live)setItems(r.items);}).catch(()=>{});
    });
