@@ -633,36 +633,45 @@ async function plantWorkspace(payload = {}) {
       return { created, updated };
     }
 
+    /* Each section imports into exactly one table:
+     *   importPM        -> pm_orders        (Work Type must be PM)
+     *   importCM/import -> cm_orders        (Work Type must be CM)
+     *   importBreakIns  -> breakin_orders   (Work Type must be Break-In / EM)
+     * A row of the wrong work type blocks the whole import.
+     */
     case "import":
+    case "importCM":
     case "importBreakIns":
     case "importPM": {
       if (!Array.isArray(rows) || !rows.length) throw Error("Import between 1 and 500 rows");
+      const wantedKind = action === "importPM" ? "PM" : action === "importBreakIns" ? "BREAKIN" : "CM";
+      const wantedLabel = wantedKind === "PM" ? "PM" : wantedKind === "BREAKIN" ? "Break-In" : "CM";
+      const mismatched = [];
       const prepared = rows.map((r) => {
         const v = clean(r);
-        if (action === "importBreakIns") {
+        const rowKind = kindOf({ ...r, ...v });
+        if (rowKind !== wantedKind) {
+          mismatched.push(r.wo_number || r.description || "row");
+          return v;
+        }
+        if (wantedKind === "BREAKIN") {
           v.job_type = "Break-In";
           v.maintenance_type = "CM";
-        } else if (action === "importPM") {
+        } else if (wantedKind === "PM") {
           v.maintenance_type = "PM";
           v.job_type = "Scheduled";
           if (!v.pm_frequency) v.pm_frequency = "Monthly";
         } else {
-          // Generic import: honour whatever the spreadsheet says per row.
-          const kind = kindOf({ ...r, ...v });
-          if (kind === "PM") {
-            v.maintenance_type = "PM";
-            v.job_type = "Scheduled";
-            if (!v.pm_frequency) v.pm_frequency = "Monthly";
-          } else if (kind === "BREAKIN") {
-            v.job_type = "Break-In";
-            v.maintenance_type = "CM";
-          } else {
-            v.maintenance_type = "CM";
-            v.job_type = "Scheduled";
-          }
+          v.maintenance_type = "CM";
+          v.job_type = "Scheduled";
         }
         return v;
       });
+      if (mismatched.length)
+        throw Error(
+          `${wantedLabel} import blocked: ${mismatched.length} row${mismatched.length > 1 ? "s" : ""} are not ${wantedLabel} work (${mismatched.slice(0, 3).join(", ")}${mismatched.length > 3 ? ", …" : ""}). Import them from their own section.`
+        );
+
       if (prepared.some((r) => !r.description?.trim())) throw Error("Every row needs a description");
       const existing = await listOrders(ws.id);
       const byNumber = new Map(existing.map((r) => [String(r.wo_number).toUpperCase(), r]));

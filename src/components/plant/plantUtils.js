@@ -38,7 +38,9 @@ export const priorityClass = (j) => {
 };
 
 // Plant category display names for each internal priority value
-export const PRIORITY_LABELS = { 'Critical': 'Emergency', 'High': 'Urgent', 'Medium': 'Normal', 'Low': 'Low Priority', 'Shutdown Item': 'Shutdown (P5)' };
+// Display labels follow the Maximo priority scale (1..5).
+export const PRIORITY_LABELS = { 'Critical': '1-Critical', 'High': '2-High Priority', 'Medium': '3-Normal', 'Low': '4-Low Priority', 'Shutdown Item': '5-Shutdown Item' };
+
 export const priorityLabel = (j) => PRIORITY_LABELS[effectivePriority(j)] || effectivePriority(j);
 
 export const isAged = (j) => aged(j) > 0;
