@@ -32,14 +32,20 @@ function createSupabaseClient() {
   // Use import.meta.env for client-side (Vite build-time replacement)
   // Fall back to process.env for SSR (server-side rendering)
   const SUPABASE_URL = import.meta.env['VITE_SUPABASE_URL'] || process.env['SUPABASE_URL'];
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] || process.env['SUPABASE_PUBLISHABLE_KEY'];
+  // Accept either naming: VITE_SUPABASE_ANON_KEY (classic anon key) or
+  // VITE_SUPABASE_PUBLISHABLE_KEY (new sb_publishable_ key). No hardcoded fallbacks.
+  const SUPABASE_PUBLISHABLE_KEY =
+    import.meta.env['VITE_SUPABASE_ANON_KEY'] ||
+    import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'] ||
+    process.env['SUPABASE_ANON_KEY'] ||
+    process.env['SUPABASE_PUBLISHABLE_KEY'];
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
       ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-      ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
+      ...(!SUPABASE_PUBLISHABLE_KEY ? ['VITE_SUPABASE_ANON_KEY'] : []),
     ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
+    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Set them in your hosting provider's environment variables (Vite only exposes VITE_-prefixed vars to the browser).`;
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }
