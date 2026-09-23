@@ -80,6 +80,26 @@ const fail = (error) => {
   if (error) throw Error(error.message || "Database request failed");
 };
 
+/* --------------------------------------------------------------- paging
+ * The database returns at most 1,000 rows per request. Any list that can grow
+ * past that (work orders, item master, system registry) must be read page by
+ * page until a short page comes back, otherwise YTD data silently truncates.
+ */
+const PAGE_SIZE = 1000;
+
+const fetchAllRows = async (buildQuery) => {
+  const rows = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+    fail(error);
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) return rows;
+    if (rows.length > 500000) return rows; // hard safety stop
+  }
+};
+
+
 // A database that has not been upgraded to the newest schema yet rejects the
 // whole write when it sees a column it does not know. Drop that single field
 // and retry so older projects keep saving everything else.
@@ -118,18 +138,28 @@ async function currentUser() {
 const entity = (name) => {
   const table = TABLES[name];
   return {
-    async filter(query = {}, sort, limit = 500, offset = 0) {
-      let q = supabase.from(table).select("*");
-      for (const [k, v] of Object.entries(query)) q = q.eq(k, v);
-      if (sort) {
-        const desc = sort.startsWith("-");
-        q = q.order(desc ? sort.slice(1) : sort, { ascending: !desc, nullsFirst: false });
+    async filter(query = {}, sort, limit, offset = 0) {
+      const build = () => {
+        let q = supabase.from(table).select("*");
+        for (const [k, v] of Object.entries(query)) q = q.eq(k, v);
+        if (sort) {
+          const desc = sort.startsWith("-");
+          q = q.order(desc ? sort.slice(1) : sort, { ascending: !desc, nullsFirst: false });
+        } else {
+          q = q.order("id", { ascending: true });
+        }
+        return q;
+      };
+      // No explicit limit -> read every page so nothing is cut off at 1,000 rows.
+      if (limit == null) {
+        const rows = await fetchAllRows(build);
+        return offset ? rows.slice(offset) : rows;
       }
-      q = q.range(offset, offset + limit - 1);
-      const { data, error } = await q;
+      const { data, error } = await build().range(offset, offset + limit - 1);
       fail(error);
       return data || [];
     },
+
     async get(id) {
       const { data, error } = await supabase.from(table).select("*").eq("id", id).maybeSingle();
       fail(error);
@@ -204,18 +234,26 @@ const clean = (input = {}) => {
 
 const listOrders = async (workspaceId) => {
   // Pull the three order tables at once and merge them into one list.
+  // Each table is read page by page so workspaces with well over 1,000 rows
+  // (full year-to-date PM / CM / Break-In history) come back complete.
   const results = await Promise.all(
     ORDER_TABLE_LIST.map((table) =>
-      supabase.from(table).select("*").eq("workspace_id", workspaceId).limit(5000),
+      fetchAllRows(() =>
+        supabase
+          .from(table)
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .order("id", { ascending: true }),
+      ),
     ),
   );
   const merged = [];
-  results.forEach((res, i) => {
-    fail(res.error);
-    for (const row of res.data || []) merged.push(tagRow(row, ORDER_TABLE_LIST[i]));
+  results.forEach((rows, i) => {
+    for (const row of rows) merged.push(tagRow(row, ORDER_TABLE_LIST[i]));
   });
   return merged;
 };
+
 
 // Find which of the three tables holds a given order id.
 const findOrder = async (workspaceId, id) => {
@@ -233,16 +271,23 @@ const findOrder = async (workspaceId, id) => {
 const nextTicket = async (workspaceId, prefix) => {
   const results = await Promise.all(
     ORDER_TABLE_LIST.map((table) =>
-      supabase.from(table).select("wo_number").eq("workspace_id", workspaceId).ilike("wo_number", `${prefix}-%`),
+      fetchAllRows(() =>
+        supabase
+          .from(table)
+          .select("wo_number")
+          .eq("workspace_id", workspaceId)
+          .ilike("wo_number", `${prefix}-%`)
+          .order("id", { ascending: true }),
+      ),
     ),
   );
   const re = new RegExp(`^${prefix}-(\\d+)$`, "i");
   let max = 0;
-  for (const res of results) {
-    fail(res.error);
-    for (const row of res.data || []) {
+  for (const rows of results) {
+    for (const row of rows) {
       const m = String(row.wo_number || "").match(re);
       if (m) max = Math.max(max, parseInt(m[1], 10));
+
     }
   }
   return `${prefix}-${String(max + 1).padStart(3, "0")}`;
@@ -322,16 +367,27 @@ async function plantWorkspace(payload = {}) {
       return { orders: await listOrders(ws.id) };
 
     case "listSystems": {
-      const { data: systems, error } = await supabase.from("system_registry").select("*").eq("workspace_id", ws.id).limit(2000);
-      fail(error);
-      return { systems: systems || [] };
+      const systems = await fetchAllRows(() =>
+        supabase
+          .from("system_registry")
+          .select("*")
+          .eq("workspace_id", ws.id)
+          .order("id", { ascending: true }),
+      );
+      return { systems };
     }
 
     case "listItems": {
-      const { data: items, error } = await supabase.from("item_master").select("*").eq("workspace_id", ws.id).limit(5000);
-      fail(error);
-      return { items: items || [] };
+      const items = await fetchAllRows(() =>
+        supabase
+          .from("item_master")
+          .select("*")
+          .eq("workspace_id", ws.id)
+          .order("id", { ascending: true }),
+      );
+      return { items };
     }
+
 
     case "itemLookup": {
       if (!code) return { items: [] };

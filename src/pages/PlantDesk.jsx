@@ -56,12 +56,16 @@ export default function PlantDesk(){
   useEffect(()=>{if(!ws.admin&&adminTabs.includes(tab))setTab('focus');},[ws.admin,tab]);
   useEffect(()=>{document.title=`${titles[tab]||'Plant Desk'} | ICMS ProMax`;},[tab]);
 
-  // Strict workspace isolation: CM workspace never sees PM records.
-  const cmOrders=useMemo(()=>ws.orders.filter(j=>j.maintenance_type!=='PM'),[ws.orders]);
+  // Strict table separation: every list reads from exactly one source table.
+  const isCM=j=>j._table==='cm_orders';
+  const isBreakIn=j=>j._table==='breakin_orders';
+  const isPM=j=>j._table==='pm_orders';
+  const cmOrders=useMemo(()=>ws.orders.filter(j=>isCM(j)||isBreakIn(j)),[ws.orders]);
+  const cmOnlyCount=useMemo(()=>ws.orders.filter(isCM).length,[ws.orders]);
   const filtered=useMemo(()=>{
     let r=cmOrders;
     if(filters.search||search)r=r.filter(j=>{const q=(filters.search||search).toLowerCase();return j.wo_number?.toLowerCase().includes(q)||j.description?.toLowerCase().includes(q)||j.equipment_tag?.toLowerCase().includes(q)||j.technician?.toLowerCase().includes(q);});
-    if(filters.today)r=r.filter(j=>j.planned_start===today()||(['Completed','Done'].includes(j.status)&&(j.completion_time?.slice(0,10)===today()||j.created_date?.slice(0,10)===today())));
+    if(filters.today){const t=today(),d=v=>v?String(v).slice(0,10):'';r=r.filter(j=>d(j.planned_start)===t||d(j.start_time)===t||d(j.created_date)===t||d(j.completion_time)===t);}
     if(filters.system)r=r.filter(j=>j.system===filters.system);
     if(filters.unit)r=r.filter(j=>j.unit===filters.unit);
     if(filters.job_type)r=r.filter(j=>j.job_type===filters.job_type);
@@ -103,12 +107,12 @@ export default function PlantDesk(){
     }
     return backlog;
   },[analyticsOrders,backlogTableFilter]);
-  const breakIns=useMemo(()=>filtered.filter(j=>j.job_type==='Break-In'),[filtered]);
-  const scheduledOrders=useMemo(()=>filtered.filter(j=>j.job_type!=='Break-In'),[filtered]);
-  const pmOrders=useMemo(()=>ws.orders.filter(j=>j.maintenance_type==='PM'),[ws.orders]);
+  const breakIns=useMemo(()=>filtered.filter(isBreakIn),[filtered]);
+  const scheduledOrders=useMemo(()=>filtered.filter(isCM),[filtered]);
+  const pmOrders=useMemo(()=>ws.orders.filter(isPM),[ws.orders]);
   const pmRangeOrders=useMemo(()=>pmOrders.filter(j=>inRange(j,range)),[pmOrders,range]);
   const breakInsForDate=useMemo(()=>breakInDate?breakIns.filter(j=>j.planned_start===breakInDate||(j.completion_time&&j.completion_time.slice(0,10)===breakInDate)):breakIns,[breakIns,breakInDate]);
-  const allBreakInCount=useMemo(()=>ws.orders.filter(j=>j.job_type==='Break-In').length,[ws.orders]);
+  const allBreakInCount=useMemo(()=>ws.orders.filter(isBreakIn).length,[ws.orders]);
   const breakInGroups=useMemo(()=>{
     const keyOf=(j)=>{
       const raw=j.planned_start||(j.completion_time||'').slice(0,10)||(j.created_date||'').slice(0,10);
@@ -151,7 +155,7 @@ export default function PlantDesk(){
   const systemOptions=ws.systems&&ws.systems.length?[...new Set(ws.systems.map(s=>s.system_name).filter(Boolean))]:[];
 
   return <div className="plant-shell">
-    <Sidebar tab={tab} onTab={setTab} workspaces={ws.workspaces} workspace={ws.workspace} onWorkspace={ws.chooseWorkspace} user={ws.user} admin={ws.admin} open={sidebarOpen} onClose={()=>setSidebarOpen(false)} count={cmOrders.length} pmCount={pmOrders.length} breakInCount={allBreakInCount} onProfile={ws.admin?()=>setProfileOpen(true):undefined} profileName={ws.profileName} workspaceMode={workspaceMode} onSwitchMode={m=>{setWorkspaceMode(m);setFilters({});setTab(m==='pm'?'pmfocus':'focus');}}/>
+    <Sidebar tab={tab} onTab={setTab} workspaces={ws.workspaces} workspace={ws.workspace} onWorkspace={ws.chooseWorkspace} user={ws.user} admin={ws.admin} open={sidebarOpen} onClose={()=>setSidebarOpen(false)} count={cmOnlyCount} pmCount={pmOrders.length} breakInCount={allBreakInCount} onProfile={ws.admin?()=>setProfileOpen(true):undefined} profileName={ws.profileName} workspaceMode={workspaceMode} onSwitchMode={m=>{setWorkspaceMode(m);setFilters({});setTab(m==='pm'?'pmfocus':'focus');}}/>
     <div className={`plant-main ${sidebarOpen?'':'sidebar-hidden'}`}>
       <Topbar title={titles[tab]} onMenu={()=>setSidebarOpen(v=>!v)} search={search} onSearch={setSearch} onTab={setTab} clockFormat={ws.workspace?.clock_format||'12'}/>
       <div className="plant-content">
