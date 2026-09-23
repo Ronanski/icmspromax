@@ -32,7 +32,7 @@ import NotificationCenter from '@/components/plant/NotificationCenter';
 import useAlertSettings from '@/components/plant/useAlertSettings';
 import usePlantWorkspace from '@/components/plant/usePlantWorkspace';
 import {toast} from '@/components/ui/use-toast';
-import {today,aged,rangeFor,inRange,greeting,units,statuses,isBacklog,backlogCategory,exportBreakInsCSV,exportAllWorkOrdersCSV,exportPMCSV} from '@/components/plant/plantUtils';
+import {today,isTodayJob,aged,rangeFor,inRange,greeting,units,statuses,isBacklog,backlogCategory,exportBreakInsCSV,exportAllWorkOrdersCSV,exportPMCSV} from '@/components/plant/plantUtils';
 import usePrefs from '@/components/plant/usePrefs';
 import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from '@/components/ui/select';
 
@@ -65,7 +65,7 @@ export default function PlantDesk(){
   const filtered=useMemo(()=>{
     let r=cmOrders;
     if(filters.search||search)r=r.filter(j=>{const q=(filters.search||search).toLowerCase();return j.wo_number?.toLowerCase().includes(q)||j.description?.toLowerCase().includes(q)||j.equipment_tag?.toLowerCase().includes(q)||j.technician?.toLowerCase().includes(q);});
-    if(filters.today){const t=today(),d=v=>v?String(v).slice(0,10):'';r=r.filter(j=>d(j.planned_start)===t||d(j.created_date)===t);}
+    if(filters.today){const t=today();r=r.filter(j=>isTodayJob(j,t));}
     if(filters.system)r=r.filter(j=>j.system===filters.system);
     if(filters.unit)r=r.filter(j=>j.unit===filters.unit);
     if(filters.job_type)r=r.filter(j=>j.job_type===filters.job_type);

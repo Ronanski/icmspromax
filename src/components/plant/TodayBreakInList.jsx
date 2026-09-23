@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import StatusBadge from '@/components/plant/StatusBadge';
-import { today, priorityClass, priorityLabel, effectivePriority } from '@/components/plant/plantUtils';
+import { today, priorityClass, priorityLabel, effectivePriority, isTodayJob } from '@/components/plant/plantUtils';
 
 const PAGE = 3;
 const PRIO_ORDER = { 'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3, 'Shutdown Item': 4 };
@@ -10,10 +10,9 @@ const PRIO_ORDER = { 'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3, 'Shutdown 
 export default function TodayBreakInList({ orders, onOpen }) {
   const [page, setPage] = useState(0);
   const t = today();
-  const d = v => (v ? String(v).slice(0, 10) : '');
-  const jobs = useMemo(() => orders
+  const jobs = useMemo(() => (orders || [])
     // STRICT: only planned_start or created_date on today's exact local date.
-    .filter(j => j._table === 'breakin_orders' && (d(j.planned_start) === t || d(j.created_date) === t))
+    .filter(j => (j._table === 'breakin_orders' || j.job_type === 'Break-In') && isTodayJob(j, t))
     .sort((a, b) => (PRIO_ORDER[effectivePriority(a)] ?? 5) - (PRIO_ORDER[effectivePriority(b)] ?? 5)),
     [orders, t]);
   const pageCount = Math.max(1, Math.ceil(jobs.length / PAGE));

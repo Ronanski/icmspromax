@@ -1,7 +1,7 @@
 import React from 'react';
 import { Zap, ArrowRight, CalendarCheck2, AlertTriangle, Plus, Loader, CheckCircle2 } from 'lucide-react';
 import OrderTable from '@/components/plant/OrderTable';
-import { today, aged, effectivePriority } from '@/components/plant/plantUtils';
+import { today, aged, effectivePriority, isTodayJob } from '@/components/plant/plantUtils';
 
 const PRIO_ORDER = { 'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3, 'Shutdown Item': 4 };
 const DONE_STATUSES = ['Completed', 'Done'];
@@ -10,21 +10,23 @@ export default function FocusCards({ orders, onOpen, onCreate, onView }) {
   const isDone = j => DONE_STATUSES.includes(j.status);
   // STRICT date rule: only planned_start or created_date on today's exact local
   // date count. Past/future scheduled orders are never shown or counted here.
-  const d = v => (v ? String(v).slice(0, 10) : '');
-  const isToday = j => d(j.planned_start) === t || d(j.created_date) === t;
-  const todays = orders.filter(isToday);
+  const isBreakIn = j => j._table === 'breakin_orders' || j.job_type === 'Break-In';
+  const todays = (orders || []).filter(j => isTodayJob(j, t));
   // Work orders dated today (Open, In-Progress, Deferred, Completed), highest priority first
   const jobs = todays
-    .filter(j => j.job_type !== 'Break-In')
+    .filter(j => !isBreakIn(j))
     .sort((a, b) => (PRIO_ORDER[effectivePriority(a)] ?? 5) - (PRIO_ORDER[effectivePriority(b)] ?? 5));
-  const breakInsToday = todays.filter(j => j.job_type === 'Break-In').length;
-  const overdue = orders.filter(j => aged(j));
+  const todaysBreakIns = todays.filter(isBreakIn);
+  const breakInsToday = todaysBreakIns.length;
+  const overdue = (orders || []).filter(j => aged(j));
   const scheduledDoneCount = jobs.filter(isDone).length;
-  const breakInsDoneCount = todays.filter(j => j.job_type === 'Break-In' && isDone(j)).length;
+  const breakInsDoneCount = todaysBreakIns.filter(isDone).length;
+  const inProgressToday = jobs.filter(j => j.status === 'In-Progress').length
+    + todaysBreakIns.filter(j => j.status === 'In-Progress').length;
   const metrics = [
     { label: 'Scheduled', icon: CalendarCheck2, count: jobs.length, filter: { today: true } },
     { label: 'Break-Ins', icon: Zap, count: breakInsToday, filter: { today: true, job_type: 'Break-In' } },
-    { label: 'In Progress', icon: Loader, count: jobs.filter(j => j.status === 'In-Progress').length, filter: { today: true, status: 'In-Progress' } },
+    { label: 'In Progress', icon: Loader, count: inProgressToday, filter: { today: true, status: 'In-Progress' } },
     { label: 'Completed', icon: CheckCircle2, count: scheduledDoneCount + breakInsDoneCount, filter: { today: true, statuses: DONE_STATUSES } },
   ];
 
