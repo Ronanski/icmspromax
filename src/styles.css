@@ -1425,3 +1425,83 @@
 /* Auth page brand mark uses the accent gradient */
 .auth-brand-mark{width:52px;height:52px;margin:0 auto 14px;border-radius:14px;background:var(--theme-gradient);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-lg)}
 .auth-brand-mark img{width:30px;height:30px}
+
+/* ============================================================
+   Premium refinement v2 — layered depth, tinted surfaces and
+   refined data density. Additive; references theme vars so
+   every preset (light + dark) benefits. No markup/logic change.
+   ============================================================ */
+
+/* Richer, layered elevation (JS themes never override these) */
+:root{
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.09);
+  --shadow-lg:0 14px 34px -10px rgba(16,24,40,.20),0 5px 14px -6px rgba(16,24,40,.12);
+}
+.dark{
+  --shadow:0 1px 2px rgba(0,0,0,.40),0 1px 3px rgba(0,0,0,.32);
+  --shadow-lg:0 18px 42px -12px rgba(0,0,0,.68),0 6px 18px -8px rgba(0,0,0,.48);
+}
+
+/* Ambient app background: a soft accent wash adds depth */
+.plant-shell{
+  background:
+    radial-gradient(1100px 560px at 100% -8%, color-mix(in srgb,var(--violet) 9%,transparent), transparent 58%),
+    radial-gradient(900px 480px at -5% 8%, color-mix(in srgb,var(--theme-secondary) 8%,transparent), transparent 55%),
+    var(--theme-gradient-soft),
+    var(--bg);
+}
+
+/* Cards & panels: hairline borders + soft elevation */
+.panel,.kpi-card,.scheduled-panel,.calendar-panel,.chart-panel,.order-panel{
+  box-shadow:var(--shadow);
+  border-color:color-mix(in srgb,var(--line) 82%,transparent);
+}
+
+/* Topbar: translucent, blurred, hairline shadow */
+.plant-topbar{
+  background:color-mix(in srgb,var(--surface) 80%,transparent);
+  backdrop-filter:saturate(1.25) blur(10px);
+  -webkit-backdrop-filter:saturate(1.25) blur(10px);
+  box-shadow:0 1px 0 color-mix(in srgb,var(--line) 70%,transparent);
+}
+
+/* Sidebar: subtle vertical sheen + refined active state */
+.plant-sidebar{background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--surface-2) 45%,var(--surface)))}
+.nav-item.selected{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--violet) 16%,transparent),color-mix(in srgb,var(--violet) 5%,transparent));
+  box-shadow:inset 2px 0 0 var(--violet);
+}
+
+/* Page title: tighter, more confident */
+.page-header h1{font-size:24px;letter-spacing:-.02em}
+.panel-heading h3,.calendar-header h3,.focus-section-heading h2{letter-spacing:-.01em}
+
+/* Section indicator becomes an accent gradient pill */
+.section-indicator{background:var(--theme-gradient);width:4px;height:18px;border-radius:999px}
+
+/* KPI cards: faint surface gradient, tighter numerals, colored hover glow */
+.kpi-card{background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--surface-2) 50%,var(--surface)))}
+.kpi-card:hover{box-shadow:var(--shadow-lg)}
+.kpi-value{font-size:28px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi-bottom{height:4px;border-radius:999px;opacity:.92}
+.kpi-icon{box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 16%,transparent)}
+.kpi-icon.violet{background:color-mix(in srgb,var(--violet) 12%,transparent);color:var(--violet)}
+
+/* Data table: banded header + accent-tinted row hover */
+.work-table thead th{background:color-mix(in srgb,var(--surface-2) 55%,var(--surface))}
+.work-table tbody tr:hover{background:color-mix(in srgb,var(--violet) 6%,transparent)}
+.system-tag{background:color-mix(in srgb,var(--violet) 12%,transparent)}
+
+/* Break-in banner: layered accent + soft inner sheen */
+.breakin-card{box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+.breakin-card::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 120% at 100% 0,rgba(255,255,255,.18),transparent 55%);pointer-events:none}
+
+/* Calendar today marker + job chips on the accent */
+.date-today{background:var(--theme-gradient);color:#fff}
+.calendar-day:hover{border-color:var(--line-2)}
+
+/* Scrollbars tuned to the surface */
+*{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--line-2) 80%,transparent);border-radius:999px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:var(--muted-ink);background-clip:padding-box}

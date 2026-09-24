@@ -45,8 +45,8 @@ type PresetSeed = Omit<CustomTheme, never> & { label: string; description: strin
 const PRESET_SEEDS: Record<ThemePresetKey, PresetSeed> = {
   light: {
     label: "Light",
-    description: "Clean slate and crisp contrast",
-    mode: "light", primary: "#2477c9", secondary: "#6aa9a0", angle: 135, background: "#f4f7f9", card: "#ffffff", border: "#d9e1e6",
+    description: "Crisp daylight with a blue-to-teal accent",
+    mode: "light", primary: "#2563eb", secondary: "#12b5a5", angle: 135, background: "#f2f6fc", card: "#ffffff", border: "#e3e9f3",
   },
   dark: {
     label: "Dark",
