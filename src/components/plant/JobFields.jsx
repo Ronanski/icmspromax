@@ -1,5 +1,5 @@
-import React from 'react';
-import {statuses,units,pmFrequencies,PRIORITY_LABELS,deferReasons} from '@/components/plant/plantUtils';
+import React,{useEffect,useRef} from 'react';
+import {statuses,units,pmFrequencies,PRIORITY_LABELS,deferReasons,targetFinish,allowableDays} from '@/components/plant/plantUtils';
 import ManpowerInput from '@/components/plant/ManpowerInput';
 export default function JobFields({value,set,restricted,systems}) {
   const systemOptions=systems&&systems.length?[...new Set(systems.map(s=>s.system_name).filter(Boolean))]:[];
@@ -9,6 +9,18 @@ export default function JobFields({value,set,restricted,systems}) {
   const ptwActive=['In-Progress','Completed','Deferred'].includes(value.status);
   const isPM=value.maintenance_type==='PM';
   const isBreakIn=value.job_type==='Break-In';
+  // CM Scheduled Finish auto-computes from Scheduled Start + the priority's allowable days
+  const autoFinish=isPM?'':targetFinish(value);
+  const lastAuto=useRef(null);
+  useEffect(()=>{
+    if(isPM)return;
+    if(!autoFinish)return;
+    const current=String(value.planned_finish||'').slice(0,10);
+    if(current&&current!==lastAuto.current)return; // respect a manual override
+    if(current===autoFinish){lastAuto.current=autoFinish;return;}
+    lastAuto.current=autoFinish;
+    set('planned_finish',autoFinish);
+  },[autoFinish,isPM]);// eslint-disable-line react-hooks/exhaustive-deps
   return <><section className="form-section"><h3>Job information</h3><fieldset disabled={restricted}>
     <div className="form-grid" style={{gridTemplateColumns:'1fr 1.5fr'}}>
       <label className="form-field">{isBreakIn?'Break-In ID':'Work order number'}<input type="text" required={!isBreakIn} value={value.wo_number||''} placeholder={isBreakIn?'Auto EM-ICMS-###':'WO number'} onChange={e=>set('wo_number',e.target.value)}/></label>
@@ -22,8 +34,8 @@ export default function JobFields({value,set,restricted,systems}) {
       {select('system','Plant system / area',systemOptions.length?systemOptions:['Unassigned'])}
       <label className="form-field">Priority<select value={value.shutdown_item?'__shutdown__':(value.priority||'Medium')} onChange={e=>{const v=e.target.value;if(v==='__shutdown__'){set('shutdown_item',true);set('priority','Low');}else{set('shutdown_item',false);set('priority',v);}}}>{['Medium','High','Critical','Low'].map(p=><option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}<option value="__shutdown__">Shutdown (P5)</option></select></label>
       <label className="form-field" style={{flexDirection:'row',alignItems:'center',gap:8,fontWeight:400}}><input type="checkbox" checked={!!value.shutdown_item} onChange={e=>set('shutdown_item',e.target.checked)} style={{width:16}}/> Mark as Shutdown Item (excluded from aging)</label>
-      {input('planned_start','Planned start','date')}
-      {input('planned_finish','Planned finish','date')}
+      {input('planned_start',isPM?'Planned start':'Scheduled start','date')}
+      <label className="form-field">{isPM?'Planned finish':'Scheduled finish (auto)'}<input type="date" value={value.planned_finish||''} onChange={e=>set('planned_finish',e.target.value)}/>{!isPM&&<small>{allowableDays(value)===null?'Shutdown item — no fixed target date':`Target = scheduled start + ${allowableDays(value)} day(s) for ${PRIORITY_LABELS[value.priority||'Medium']}`}</small>}</label>
     </div>
     {isBreakIn&&<label className="form-field mt-4">Associated Follow-up Work Order #<input type="text" placeholder="Link a corrective WO ticket to this break-in" value={value.associated_wo||''} onChange={e=>set('associated_wo',e.target.value)}/></label>}
   </fieldset></section>

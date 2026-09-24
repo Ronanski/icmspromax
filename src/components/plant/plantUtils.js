@@ -21,10 +21,34 @@ export const isTodayJob = (j, t = today()) => {
   return plannedDay ? plannedDay === t : localDay(j?.created_date) === t;
 };
 
-// Official Plant Priority SLA Matrix — aged days threshold per priority
-export const SLA_THRESHOLDS = { 'Critical': 0, 'High': 4, 'Medium': 15, 'Low': 45, 'Shutdown Item': null };
+// Official Plant Priority SLA Matrix — allowable DCM Alarm days per priority
+// P1 Emergency +0 | P2 Urgent +4 | P3 Normal +20 | P4 Low +59 | P5 Shutdown excluded
+export const SLA_THRESHOLDS = { 'Critical': 0, 'High': 4, 'Medium': 20, 'Low': 59, 'Shutdown Item': null };
 
 export const slaThreshold = (priority) => SLA_THRESHOLDS[priority] ?? null;
+
+// Allowable days for a job, honouring the Shutdown Item override
+export const allowableDays = (j) => (j?.shutdown_item ? null : slaThreshold(j?.priority ?? 'Medium'));
+
+// Scheduled Start — user input or imported Maximo planned_start (YYYY-MM-DD)
+export const scheduledStart = (j) => localDay(j?.planned_start);
+
+// Scheduled Finish — auto-computed target date = Scheduled Start + allowable days.
+// Shutdown Items (P5) have no fixed target date.
+export const targetFinish = (j) => {
+  const start = scheduledStart(j);
+  const days = allowableDays(j);
+  if (!start || days === null) return '';
+  return format(new Date(new Date(start + 'T12:00:00').getTime() + days * 86400000), 'yyyy-MM-dd');
+};
+
+// True when any execution update exists on the work order
+export const hasExecutionUpdate = (j) => Boolean(
+  String(j?.action_taken || '').trim() ||
+  String(j?.as_found || '').trim() ||
+  String(j?.as_left || '').trim() ||
+  j?.start_time || j?.completion_time
+);
 
 // Days a job has been overdue, based on earliest planned date (start/finish)
 export const overdueDays = (j) => {
@@ -33,6 +57,25 @@ export const overdueDays = (j) => {
   const dates = [j.planned_start, j.planned_finish].filter(Boolean).map(d => { const m = String(d).match(/\d{4}-\d{2}-\d{2}/); return m ? m[0] : ''; }).filter(Boolean).sort();
   if (!dates.length || dates[0] >= t) return 0;
   return differenceInCalendarDays(new Date(t + 'T12:00:00'), new Date(dates[0] + 'T12:00:00'));
+};
+
+// Days elapsed past the computed target finish date (0 when still within target)
+export const daysPastTarget = (j) => {
+  if (!['Open', 'In-Progress', 'Pending Parts', 'Deferred'].includes(j?.status)) return 0;
+  const target = targetFinish(j);
+  if (!target) return 0;
+  const t = today();
+  if (target >= t) return 0;
+  return differenceInCalendarDays(new Date(t + 'T12:00:00'), new Date(target + 'T12:00:00'));
+};
+
+// Expired / Overdue backlog (DCM Alarm): past the allowable DCM days of its
+// priority with no action taken / execution update. Shutdown Items excluded.
+export const isExpired = (j) => {
+  if (!j || j.shutdown_item) return false;
+  if (allowableDays(j) === null) return false;
+  if (hasExecutionUpdate(j)) return false;
+  return daysPastTarget(j) > 0;
 };
 
 // Aged only when overdue days exceed the priority's SLA threshold (Shutdown excluded)
