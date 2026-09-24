@@ -16,6 +16,7 @@
 // Files produced by this app's own "Export to Excel" are still recognised, so an
 // export -> import round-trip keeps every field.
 import * as XLSX from "xlsx";
+import { targetFinish } from "@/components/plant/plantUtils";
 
 const norm = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 const cleanCell = (v) => (v === null || v === undefined ? "" : String(v).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim());
@@ -338,6 +339,12 @@ function parsePlantImport({ content, section }) {
     if (!workType) return; // already recorded as rejected above
 
     applyWorkType(out, workType);
+
+    // CM: Scheduled Finish is always auto-computed from Scheduled Start + priority days.
+    if (out.maintenance_type === "CM" && out.planned_start) {
+      const tf = targetFinish(out);
+      if (tf) out.planned_finish = tf; else delete out.planned_finish;
+    }
 
     // Don't let contradictory dates block the whole file.
     if (out.planned_start && out.planned_finish && out.planned_start > out.planned_finish) out.planned_finish = out.planned_start;
