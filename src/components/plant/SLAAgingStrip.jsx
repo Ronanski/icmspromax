@@ -1,11 +1,11 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { aged, overdueDays, slaThreshold } from '@/components/plant/plantUtils';
+import { aged, agedBacklog, overdueDays, slaThreshold } from '@/components/plant/plantUtils';
 
 // One-line alert strip: active work orders that are Aged or nearing SLA breach.
 export default function SLAAgingStrip({ orders, onView }) {
   const active = orders.filter(j => j.status === 'Open' || j.status === 'In-Progress');
-  const agedJobs = active.filter(j => aged(j) > 0);
+  const agedJobs = agedBacklog(active);
   const nearing = active.filter(j => {
     if (j.shutdown_item) return false;
     const threshold = slaThreshold(j.priority);

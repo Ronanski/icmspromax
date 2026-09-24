@@ -203,7 +203,7 @@ const ORDER_FIELDS = [
   "associated_wo","deferred_reason","pr_number",
 ];
 const UNITS = ["Unit 1", "Unit 2", "Unit 3", "Unit 4", "Common", "MH", "WT", "COMP", "Phase 1", "Phase 2"];
-const STATUSES = ["Open", "In-Progress", "Pending Parts", "Completed", "Deferred", "Cancelled"];
+const STATUSES = ["Open", "In-Progress", "Rescheduled", "Pending Parts", "Completed", "Deferred", "Cancelled"];
 const PM_FREQUENCIES = ["Daily", "Weekly", "Monthly", "Quarterly", "Semi-Annual", "Annual", "Operating Hours"];
 
 const clean = (input = {}) => {
@@ -717,7 +717,23 @@ async function plantWorkspace(payload = {}) {
       for (const [table, batch] of Object.entries(inserts)) {
         if (batch.length) fail((await supabase.from(table).insert(batch)).error);
       }
-      return { created, updated };
+
+      // Every import re-applies the priority matrix to ALL existing CM /
+      // Break-In work orders, so the scheduled finish of records that were not
+      // part of this file stays correct too.
+      const touched = new Set(prepared.map((r) => String(r.wo_number || "").trim().toUpperCase()));
+      let recomputed = 0;
+      for (const row of existing) {
+        if (row._table === ORDER_TABLE.PM) continue;
+        if (touched.has(String(row.wo_number || "").trim().toUpperCase())) continue;
+        const next = applyTargetFinish({}, row).planned_finish;
+        if (next === undefined) continue;
+        const current = row.planned_finish ? String(row.planned_finish).slice(0, 10) : null;
+        if ((next || null) === current) continue;
+        fail((await supabase.from(row._table).update({ planned_finish: next || null, updated_date: nowISO() }).eq("id", row.id)).error);
+        recomputed++;
+      }
+      return { created, updated, recomputed };
     }
 
     case "breakInBatch": {

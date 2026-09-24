@@ -64,13 +64,13 @@ const convertPriority = (raw) => {
 
 /* -------------------------------------------------------------------- status
  * CLOSE = Completed · DEFER / APPR = Deferred · INPRG = In Progress
- * SUBMIT / RESCH = Open
+ * SUBMIT = Open · RESCH = Rescheduled
  */
 const STATUS_FROM_MAXIMO = {
   CLOSE: "Completed", CLOSED: "Completed", COMP: "Completed", COMPLETE: "Completed", COMPLETED: "Completed", DONE: "Completed",
   DEFER: "Deferred", DEFERRED: "Deferred", APPR: "Deferred", APPROVED: "Deferred", HOLD: "Deferred", ONHOLD: "Deferred",
   INPRG: "In-Progress", INPROGRESS: "In-Progress", ONGOING: "In-Progress", STARTED: "In-Progress", WIP: "In-Progress",
-  SUBMIT: "Open", SUBMITTED: "Open", RESCH: "Open", RESCHEDULED: "Open", OPEN: "Open", WAPPR: "Open", NEW: "Open", DRAFT: "Open",
+  SUBMIT: "Open", SUBMITTED: "Open", RESCH: "Rescheduled", RESCHEDULED: "Rescheduled", OPEN: "Open", WAPPR: "Open", NEW: "Open", DRAFT: "Open",
 };
 const convertStatus = (raw) => STATUS_FROM_MAXIMO[String(raw || "").trim().toUpperCase().replace(/[\s_-]/g, "")] || "";
 

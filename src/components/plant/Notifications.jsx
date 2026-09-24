@@ -35,7 +35,7 @@ export default function Notifications({orders=[],items=[],settings={},onOpenJob,
     </div>}
     {agedJobs.length>0&&<div className="notif-banner aged" role="alert">
       <span className="notif-icon"><AlertTriangle size={18}/></span>
-      <div><strong>{agedJobs.length} Aged Work Order{agedJobs.length!==1?'s':''}</strong><span>Exceeded SLA threshold (Emergency 0d · Urgent 4d · Normal 15d · Low Priority 45d).</span></div>
+      <div><strong>{agedJobs.length} Aged Work Order{agedJobs.length!==1?'s':''}</strong><span>Past scheduled finish with no action taken (Emergency 0d · Urgent 4d · Normal 15d · Low Priority 45d).</span></div>
       <button className="notif-link" onClick={()=>onOpenJob?.(agedJobs[0])}>Review</button>
     </div>}
     {lowStock.length>0&&<div className="notif-banner stock" role="alert">

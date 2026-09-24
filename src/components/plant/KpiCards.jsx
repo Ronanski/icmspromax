@@ -1,11 +1,11 @@
 import React from 'react';
-import {Target, CircleCheck, Timer, Zap, ArrowUpRight, Repeat, Activity, Wrench, Gauge, Layers} from 'lucide-react';
-import {mttrHours, mtbfHours, completionRate, formatHours, backlogStats, ratioPeriodLabel} from '@/components/plant/plantUtils';
+import {Target, CircleCheck, Timer, Zap, ArrowUpRight, Repeat, Activity, Wrench, Gauge, Layers, AlarmClock} from 'lucide-react';
+import {mttrHours, mtbfHours, completionRate, formatHours, backlogStats, ratioPeriodLabel, agedBacklog} from '@/components/plant/plantUtils';
 
-// The five core metrics a supervisor sees by default.
-export const CORE_METRICS = ['schedule','completed','progress','breakin','pmcm'];
+// The core metrics a supervisor sees by default.
+export const CORE_METRICS = ['schedule','completed','progress','aged','breakin','pmcm'];
 // Trimmed set shown in Supervisor Mode — essentials only.
-export const ESSENTIAL_METRICS = ['schedule','completed','backlog'];
+export const ESSENTIAL_METRICS = ['schedule','completed','backlog','aged'];
 
 export const METRIC_LABELS = {
   schedule:'Schedule Compliance',
@@ -14,6 +14,7 @@ export const METRIC_LABELS = {
   breakin:'Break-In Ratio',
   pmcm:'PM vs CM Ratio',
   backlog:'Active Backlog',
+  aged:'Aged / Backlog (Overdue)',
   mttr:'MTTR',
   mtbf:'MTBF',
   rate:'Completion Rate',
@@ -32,6 +33,9 @@ export default function KpiCards({orders,onDrill,pmOrders=[],metrics=CORE_METRIC
   const meetsTarget=total>0&&pmPct>=80;
   const mttr=mttrHours(orders),mtbf=mtbfHours(orders),rate=completionRate(orders);
   const backlog=backlogStats(orders);
+  // Aged / Backlog = past scheduled finish, no action taken, and not exempt
+  // (Deferred / Shutdown Item / Spare Parts Not Available / Completed / Closed).
+  const agedCount=agedBacklog(orders).length;
 
   const all={
     schedule:{label:METRIC_LABELS.schedule,value:scheduled.length?Math.round(compliant/scheduled.length*100)+'%':'—',note:`${compliant} of ${scheduled.length} scheduled jobs on time`,icon:Target,color:'violet',filter:{job_type:'Scheduled'}},
@@ -40,6 +44,7 @@ export default function KpiCards({orders,onDrill,pmOrders=[],metrics=CORE_METRIC
     breakin:{label:METRIC_LABELS.breakin,value:orders.length?Math.round(breakins/orders.length*100)+'%':'0%',note:`${breakins} unscheduled of ${orders.length} total jobs`,icon:Zap,color:'amber',filter:{job_type:'Break-In'}},
     pmcm:{label:METRIC_LABELS.pmcm,value:total?`${pmPct}% / ${cmPct}%`:'—',note:`${ratioPeriodLabel(ratioPeriod)} view · Target 80% PM / 20% CM · ${pm} active PM / ${cm} active CM${total?(meetsTarget?' · On target':' · Below target'):''}`,icon:Repeat,color:meetsTarget?'green':'amber',filter:{maintenance_type:'PM'},ratio:true},
     backlog:{label:METRIC_LABELS.backlog,value:backlog.total,note:`Avg wait ${backlog.avgAge}d · oldest ${backlog.oldest}d · ${backlog.critical} emergency`,icon:Layers,color:backlog.chronic?'amber':'blue',filter:{status:'Backlog'}},
+    aged:{label:METRIC_LABELS.aged,value:agedCount,note:`Past scheduled finish with no action taken · excludes deferred, shutdown, parts-pending and closed jobs`,icon:AlarmClock,color:agedCount?'amber':'green',filter:{status:'Aged'}},
     mttr:{label:METRIC_LABELS.mttr,value:formatHours(mttr),note:mttr===null?'Needs actual start and completion times':'Mean time to repair on completed jobs',icon:Wrench,color:'blue',filter:{status:'Completed'}},
     mtbf:{label:METRIC_LABELS.mtbf,value:formatHours(mtbf),note:mtbf===null?'Needs at least two breakdowns per asset':'Mean uptime between breakdowns per asset',icon:Activity,color:'violet',filter:{job_type:'Break-In'}},
     rate:{label:METRIC_LABELS.rate,value:rate===null?'—':rate+'%',note:'Completed share of all live work orders',icon:Gauge,color:rate!==null&&rate>=80?'green':'amber',filter:{status:'Completed'}},

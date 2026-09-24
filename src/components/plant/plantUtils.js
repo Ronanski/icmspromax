@@ -42,51 +42,71 @@ export const hasExecutionUpdate = (j) => Boolean(
   j?.start_time || j?.completion_time
 );
 
+// Statuses that keep a work order inside the Aged / Backlog evaluation.
+// RE-ENTRY RULE: a job returns to the evaluation as soon as it is set back to
+// one of these.
+export const AGING_ACTIVE_STATUSES = ['Open', 'In-Progress', 'In Progress', 'Rescheduled'];
+
+// Statuses (or status details) that remove a work order from the Aged/Backlog
+// counter entirely: deferred, shutdown items, awaiting spare parts, finished.
+export const AGING_EXEMPT_STATUSES = [
+  'Deferred', 'Shutdown Item', 'Spare Parts Not Available', 'Pending Parts',
+  'Completed', 'Closed', 'Cancelled',
+];
+
+const EXEMPT_DETAIL = /shutdown|spare\s*part|parts?\s*not\s*available|defer/i;
+
 // Days a job has been overdue, based on earliest planned date (start/finish)
 export const overdueDays = (j) => {
-  if (!['Open', 'In-Progress', 'Pending Parts'].includes(j.status)) return 0;
+  if (!AGING_ACTIVE_STATUSES.includes(String(j?.status || ''))) return 0;
   const t = today();
   const dates = [j.planned_start, j.planned_finish].filter(Boolean).map(d => { const m = String(d).match(/\d{4}-\d{2}-\d{2}/); return m ? m[0] : ''; }).filter(Boolean).sort();
   if (!dates.length || dates[0] >= t) return 0;
   return differenceInCalendarDays(new Date(t + 'T12:00:00'), new Date(dates[0] + 'T12:00:00'));
 };
 
-// Days elapsed past the computed target finish date (0 when still within target)
+// Any recorded action on the job (Aged/Backlog needs action_taken to be empty)
+export const hasActionTaken = (j) => Boolean(String(j?.action_taken || '').trim());
+
+// The finish date the aging rule measures against: the stored scheduled finish
+// when present, otherwise the priority-computed target.
+export const agingTargetFinish = (j) => localDay(j?.planned_finish) || targetFinish(j);
+
+// Days elapsed past the scheduled finish date (0 when still within target)
 export const daysPastTarget = (j) => {
-  if (!['Open', 'In-Progress', 'Pending Parts', 'Deferred'].includes(j?.status)) return 0;
-  const target = targetFinish(j);
+  const target = agingTargetFinish(j);
   if (!target) return 0;
   const t = today();
   if (target >= t) return 0;
   return differenceInCalendarDays(new Date(t + 'T12:00:00'), new Date(target + 'T12:00:00'));
 };
 
-// Expired / Overdue backlog (DCM Alarm): past the allowable DCM days of its
-// priority with no action taken / execution update. Shutdown Items excluded.
-export const isExpired = (j) => {
-  if (!j || j.shutdown_item) return false;
-  if (allowableDays(j) === null) return false;
-  if (hasExecutionUpdate(j)) return false;
-  return daysPastTarget(j) > 0;
-};
-
-// Aged only when overdue days exceed the priority's SLA threshold (Shutdown excluded)
-// On hold for shutdown or spare parts — not aged until ready to work again.
-export const isOnHoldForAging = (j) => {
-  if (!j) return false;
+// EXEMPTIONS: shutdown items / P5 (no target finish), deferred work, spare
+// parts pending, completed & closed work, and anything with an action recorded.
+export const isAgingExempt = (j) => {
+  if (!j) return true;
   if (j.shutdown_item) return true;
-  if (j.status === 'Pending Parts') return true;
-  if (j.status === 'Deferred' && ['For Shutdown', 'For PR'].includes(j.deferred_reason)) return true;
-  return false;
+  if (allowableDays(j) === null) return true; // Priority 5 — no target finish
+  const status = String(j.status || '').trim();
+  if (AGING_EXEMPT_STATUSES.includes(status)) return true;
+  if (EXEMPT_DETAIL.test(String(j.deferred_reason || ''))) return true;
+  if (hasActionTaken(j)) return true;
+  return !AGING_ACTIVE_STATUSES.includes(status);
 };
 
-export const aged = (j) => {
-  if (isOnHoldForAging(j)) return 0; // Shutdown / waiting on spare parts — never ages
-  const threshold = slaThreshold(j.priority);
-  if (threshold === null) return 0;
-  const od = overdueDays(j);
-  return od > threshold ? od : 0;
-};
+// Aged / Backlog: today is past the scheduled finish AND no action taken yet,
+// and the job is not exempt by status/detail.
+export const isAgedBacklog = (j) => !isAgingExempt(j) && daysPastTarget(j) > 0;
+
+// Kept for compatibility: the Expired / Overdue view uses the same single rule.
+export const isExpired = isAgedBacklog;
+
+export const isOnHoldForAging = (j) => isAgingExempt(j) && !hasActionTaken(j);
+
+export const aged = (j) => (isAgedBacklog(j) ? daysPastTarget(j) : 0);
+
+// Filtered Aged/Backlog list — the single source for KPI cards & notifications.
+export const agedBacklog = (orders) => (orders || []).filter(isAgedBacklog);
 
 // Effective priority label (Shutdown Item overrides stored priority)
 export const effectivePriority = (j) => j.shutdown_item ? 'Shutdown Item' : (j.priority || 'Medium');
@@ -123,7 +143,7 @@ export const nextPMDate = (frequency, fromDate = new Date()) => {
 export const pmFrequencies = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Operating Hours'];
 export const priorities = ['Critical', 'High', 'Medium', 'Low', 'Shutdown Item'];
 export const systems = ['Boiler', 'Turbine', 'Water Treatment', 'Fuel Handling', 'Balance of Plant'];
-export const statuses = ['Open', 'In-Progress', 'Pending Parts', 'Completed', 'Deferred', 'Cancelled'];
+export const statuses = ['Open', 'In-Progress', 'Rescheduled', 'Pending Parts', 'Completed', 'Deferred', 'Cancelled'];
 export const units = ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Common', 'MH', 'WT', 'COMP', 'Phase 1', 'Phase 2'];
 export const deferReasons = ['For Shutdown', 'For Load Down Activities', 'For PR', 'Equipment Unavailability'];
 
@@ -313,7 +333,7 @@ export const exportPMCSV = (orders) => downloadCSV(
 );
 
 // Active backlog = Open + In-Progress + Pending Parts (not yet completed/deferred/cancelled)
-export const isBacklog = (j) => ['Open', 'In-Progress', 'Pending Parts'].includes(j.status);
+export const isBacklog = (j) => ['Open', 'In-Progress', 'Rescheduled', 'Pending Parts'].includes(j.status);
 
 /* ------------------------------------------------ backlog classification */
 

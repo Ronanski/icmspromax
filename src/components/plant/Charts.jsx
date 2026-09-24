@@ -44,7 +44,7 @@ export default function Charts({orders,onDrill,onBacklogFilter,activeBacklogFilt
   const factors=[
     ['Average wait',`${stats.avgAge} d`,null,null,'Average days a work order has been open.'],
     ['Oldest job',`${stats.oldest} d`,'oldest',true,'The maximum number of days a single active job has been waiting.'],
-    ['Past SLA',stats.aged,'aged',true,'Number of jobs that exceeded their target date.'],
+    ['Aged / Backlog',stats.aged,'aged',true,'Past the scheduled finish date with no action taken. Deferred, shutdown, spare-parts-pending and completed jobs are excluded.'],
     ['Emergency',stats.critical,'priority','Critical','High-priority urgent breakdown tasks.'],
     ['Waiting on parts',stats.pendingParts,'status','Pending Parts','Tasks on hold waiting for spare supply.'],
     ['Unassigned',stats.unassigned,'unassigned',true,'Jobs without a designated technician or system group.'],
@@ -97,7 +97,7 @@ export default function Charts({orders,onDrill,onBacklogFilter,activeBacklogFilt
     </section>
 
     {!supervisorMode&&agedOrders.length>0&&<section className="panel chart-panel" style={{marginTop:16}}>
-      <div className="panel-heading"><div><h3>Aged Work Orders</h3><p>Past the priority SLA, by unit · {agedOrders.length} total</p></div><AlertCircle size={17} className="muted"/></div>
+      <div className="panel-heading"><div><h3>Aged / Backlog Work Orders</h3><p>Past scheduled finish, no action taken, by unit · {agedOrders.length} total</p></div><AlertCircle size={17} className="muted"/></div>
       <div className="bar-chart"><ResponsiveContainer width="100%" height={200}><BarChart data={agedByUnit} layout="vertical" margin={{top:5,right:20,left:20,bottom:5}}><CartesianGrid horizontal={false} strokeDasharray="3 4" stroke="var(--line)"/><XAxis type="number" allowDecimals={false} tick={{fontSize:10,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false}/><YAxis type="category" dataKey="name" tick={{fontSize:11,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false} width={70}/><Tooltip cursor={{fill:'var(--hover)'}} contentStyle={{background:'var(--surface)',border:'1px solid var(--line)',borderRadius:8}}/><Bar dataKey="value" name="Aged" fill="#f7bb53" radius={[0,4,4,0]} maxBarSize={28} cursor="pointer" onClick={d=>onDrill({unit:d.name,status:'Aged'})}/></BarChart></ResponsiveContainer></div>
     </section>}
   </>;

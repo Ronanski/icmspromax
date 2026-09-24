@@ -2,7 +2,7 @@ import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {AlertTriangle,Bell,CalendarClock,CheckCheck,Mail,MailOpen,PackageMinus,UserPlus,Zap} from 'lucide-react';
 import {Popover,PopoverContent,PopoverTrigger} from '@/components/ui/popover';
 import supabase from '@/lib/supabaseClient';
-import {aged,lowStockItems,overduePMs,newAssignments,today} from '@/components/plant/plantUtils';
+import {aged,agedBacklog,lowStockItems,overduePMs,newAssignments,today} from '@/components/plant/plantUtils';
 
 const ICONS={critical:Zap,overdue:CalendarClock,aged:AlertTriangle,stock:PackageMinus,due:CalendarClock,assignment:UserPlus};
 const notificationDate=item=>{const raw=item?.updated_at||item?.created_at||item?.created_date||item?.planned_start||item?.planned_finish;const date=raw?new Date(raw):new Date();return Number.isNaN(date.getTime())?new Date():date;};
@@ -33,7 +33,7 @@ export default function NotificationCenter({orders=[],items=[],settings={},defau
   const notifications=useMemo(()=>{
     const cmOrders=orders.filter(j=>j.maintenance_type!=='PM'),pmOrders=orders.filter(j=>j.maintenance_type==='PM'),entries=[];
     cmOrders.filter(j=>j.job_type==='Break-In'&&j.priority==='Critical'&&['Open','In-Progress'].includes(j.status)).forEach(j=>entries.push({id:`critical-${j.id}`,category:'corrective',type:'critical',title:'Critical break-in work order',detail:`${j.wo_number||j.equipment_tag||'Order'} needs immediate attention.`,date:notificationDate(j),job:j,action:'Open job'}));
-    cmOrders.filter(j=>aged(j)>0).forEach(j=>entries.push({id:`aged-${j.id}`,category:'corrective',type:'aged',title:'Corrective work order past SLA',detail:`${j.wo_number||j.equipment_tag||'Order'} has been open for ${aged(j)} days.`,date:notificationDate(j),job:j,action:'Review order'}));
+    agedBacklog(cmOrders).forEach(j=>entries.push({id:`aged-${j.id}`,category:'corrective',type:'aged',title:'Aged Overdue work order',detail:`${j.wo_number||j.equipment_tag||'Order'} is ${aged(j)} day(s) past its scheduled finish with no action taken.`,date:notificationDate(j),job:j,action:'Review order'}));
     overduePMs(pmOrders).forEach(j=>entries.push({id:`overdue-${j.id}`,category:'preventive',type:'overdue',title:'Preventive work order overdue',detail:`${j.wo_number||j.equipment_tag||'PM'} missed its planned start date.`,date:notificationDate(j),goPM:true,action:'View PM schedule'}));
     pmOrders.filter(j=>!['Completed','Cancelled'].includes(j.status)&&j.planned_start).forEach(j=>{const diff=Math.round((new Date(`${j.planned_start}T12:00:00`)-t)/(1000*60*60*24));if(diff>=0&&diff<=2)entries.push({id:`due-${j.id}`,category:'preventive',type:'due',title:`PM due in ${diff===0?'today':`${diff} days`}`,detail:`${j.wo_number||j.equipment_tag||'PM'} is scheduled for ${j.planned_start}.`,date:notificationDate(j),goPM:true,action:'View PM schedule'});});
     if(settings.notify_low_stock!==false)lowStockItems(items,settings.low_stock_threshold??5).forEach(item=>entries.push({id:`stock-${item.id||item.item_code}`,category:'corrective',type:'stock',title:'Low inventory level',detail:`${item.description||item.code} stock is at ${item.stock??0} (threshold: ${settings.low_stock_threshold??5}).`,date:notificationDate(item),goItems:true,action:'Check inventory'}));
