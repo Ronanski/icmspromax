@@ -50,8 +50,8 @@ const PRESET_SEEDS: Record<ThemePresetKey, PresetSeed> = {
   },
   dark: {
     label: "Dark",
-    description: "Deep zinc with soft cyan accents",
-    mode: "dark", primary: "#65a8d9", secondary: "#64a594", angle: 135, background: "#151a20", card: "#1e252d", border: "#35404a",
+    description: "Premium slate with vibrant violet accents",
+    mode: "dark", primary: "#8b5cf6", secondary: "#6366f1", angle: 135, background: "#0a0b10", card: "#15161f", border: "#282a38",
   },
   midnight: {
     label: "Midnight Navy",
@@ -231,14 +231,14 @@ function readLocalPreference(): ThemePreference {
   try {
     const saved = normalizePreference(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"));
     if (saved) return saved;
-    return localStorage.getItem(LEGACY_STORAGE_KEY) === "dark" ? "dark" : "light";
+    return localStorage.getItem(LEGACY_STORAGE_KEY) === "light" ? "light" : "dark";
   } catch {
-    return "light";
+    return "dark";
   }
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreference] = useState<ThemePreference>("light");
+  const [preference, setPreference] = useState<ThemePreference>("dark");
   const [preview, setPreview] = useState<ThemePreference | null>(null);
   const previewRef = useRef<ThemePreference | null>(null);
   previewRef.current = preview;

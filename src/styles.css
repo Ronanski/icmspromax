@@ -1355,3 +1355,73 @@
 .backlog-metric-row:hover .metric-info,.backlog-metric-row.active .metric-info{color:var(--violet);opacity:1}
 [data-tip]{position:relative}
 [data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:0;background:var(--surface);color:var(--ink);border:1px solid var(--line-2);border-radius:8px;padding:7px 10px;font-size:11px;line-height:1.45;font-weight:500;white-space:normal;width:max-content;max-width:230px;z-index:60;box-shadow:var(--shadow-lg);pointer-events:none;text-align:left}
+
+/* ============================================================
+   Premium UI overhaul — accent CTA, crisp badges,
+   micro-interactions and dark-mode retints.
+   Additive + higher specificity so existing logic/light mode
+   stay intact.
+   ============================================================ */
+
+/* Vibrant accent CTA (both modes) with subtle lift on hover */
+.primary-button{background:var(--theme-gradient);color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12),0 1px 3px rgba(0,0,0,.08);transition:transform .18s ease,box-shadow .18s ease,filter .18s ease}
+.primary-button:hover:not(:disabled){opacity:1;transform:translateY(-1px);box-shadow:var(--shadow-lg);filter:saturate(1.08)}
+.primary-button:active:not(:disabled){transform:translateY(0);box-shadow:var(--shadow)}
+
+/* Secondary + icon buttons: smoother focus/hover feedback */
+.secondary-button,.icon-button{transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease}
+.secondary-button:hover:not(:disabled){border-color:var(--line-2)}
+.secondary-button:active:not(:disabled),.icon-button:active{transform:translateY(0)}
+.icon-button:hover{border-color:var(--line-2);color:var(--ink)}
+
+/* Nav items: crisper active state with accent rail */
+.nav-item{transition:background .18s ease,color .18s ease}
+.nav-item.selected{box-shadow:inset 2px 0 0 var(--violet)}
+
+/* Cards: gentler, more premium motion */
+.kpi-card,.scheduled-card,.breakin-tile{transition:transform .2s cubic-bezier(.2,.7,.3,1),box-shadow .2s ease,border-color .2s ease}
+.kpi-card:hover,.breakin-tile:hover{border-color:var(--line-2)}
+
+/* Focusable field polish */
+.global-search,.filter-search{transition:border-color .18s ease,box-shadow .18s ease}
+.global-search:focus-within,.filter-search:focus-within{border-color:var(--violet);box-shadow:0 0 0 3px color-mix(in srgb,var(--violet) 22%,transparent)}
+
+/* ---------- Dark-mode badge / chip retints (crisp, translucent) ---------- */
+.dark .status-open{background:color-mix(in srgb,#94a3b8 16%,transparent);color:#cbd5e1}
+.dark .status-open i{background:#94a3b8}
+.dark .status-progress{background:color-mix(in srgb,#38bdf8 18%,transparent);color:#7dd3fc}
+.dark .status-progress i{background:#38bdf8}
+.dark .status-completed{background:color-mix(in srgb,#34d399 18%,transparent);color:#6ee7b7}
+.dark .status-completed i{background:#34d399}
+.dark .status-deferred{background:color-mix(in srgb,#fbbf24 18%,transparent);color:#fcd34d}
+.dark .status-deferred i{background:#fbbf24}
+.dark .status-parts{background:color-mix(in srgb,#fb923c 18%,transparent);color:#fdba74}
+.dark .status-parts i{background:#fb923c}
+.dark .status-cancelled{background:color-mix(in srgb,#94a3b8 12%,transparent);color:#94a3b8}
+.dark .status-cancelled i{background:#94a3b8}
+
+.dark .priority-high{background:color-mix(in srgb,#fb923c 18%,transparent);color:#fdba74;border-color:color-mix(in srgb,#fb923c 45%,transparent)}
+.dark .priority-high i{background:#fdba74}
+
+/* KPI accent icons */
+.dark .kpi-icon.green{background:color-mix(in srgb,#34d399 16%,transparent);color:#6ee7b7}
+.dark .kpi-icon.blue{background:color-mix(in srgb,#38bdf8 16%,transparent);color:#7dd3fc}
+.dark .kpi-icon.amber{background:color-mix(in srgb,#fbbf24 16%,transparent);color:#fcd34d}
+
+/* Calendar job chips */
+.dark .calendar-job.complete{background:color-mix(in srgb,#34d399 16%,transparent);border-left-color:#34d399}
+.dark .calendar-job.complete strong{color:#6ee7b7}
+.dark .calendar-job.break-in{background:color-mix(in srgb,#fbbf24 16%,transparent);border-left-color:#fbbf24}
+.dark .calendar-job.break-in strong{color:#fcd34d}
+.dark .calendar-job.pm{background:color-mix(in srgb,#a78bfa 20%,transparent);border-left-color:#a78bfa}
+.dark .calendar-job.pm strong{color:#c4b5fd}
+.dark .date-today{background:var(--violet);color:#fff}
+
+/* Inline alerts / banners */
+.dark .content-error{background:color-mix(in srgb,#ef4444 14%,transparent);border-color:color-mix(in srgb,#ef4444 32%,transparent);color:#fca5a5}
+.dark .aged-banner{background:color-mix(in srgb,#fbbf24 12%,transparent);border-color:color-mix(in srgb,#fbbf24 30%,transparent);color:#fcd34d}
+.dark .aged-banner:hover{background:color-mix(in srgb,#fbbf24 20%,transparent)}
+
+/* Auth page brand mark uses the accent gradient */
+.auth-brand-mark{width:52px;height:52px;margin:0 auto 14px;border-radius:14px;background:var(--theme-gradient);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-lg)}
+.auth-brand-mark img{width:30px;height:30px}
