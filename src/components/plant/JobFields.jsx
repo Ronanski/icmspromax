@@ -1,4 +1,4 @@
-import React,{useEffect,useRef} from 'react';
+import React,{useEffect} from 'react';
 import {statuses,units,pmFrequencies,PRIORITY_LABELS,deferReasons,targetFinish,allowableDays} from '@/components/plant/plantUtils';
 import ManpowerInput from '@/components/plant/ManpowerInput';
 export default function JobFields({value,set,restricted,systems}) {
@@ -9,18 +9,16 @@ export default function JobFields({value,set,restricted,systems}) {
   const ptwActive=['In-Progress','Completed','Deferred'].includes(value.status);
   const isPM=value.maintenance_type==='PM';
   const isBreakIn=value.job_type==='Break-In';
-  // CM Scheduled Finish auto-computes from Scheduled Start + the priority's allowable days
+  // CM Scheduled Finish always follows Scheduled Start + the priority's allowable days.
+  // Changing the priority (or the start date) instantly rewrites the finish date.
   const autoFinish=isPM?'':targetFinish(value);
-  const lastAuto=useRef(null);
+  const hasStart=Boolean(String(value.planned_start||'').slice(0,10));
   useEffect(()=>{
-    if(isPM)return;
-    if(!autoFinish)return;
+    if(isPM||!hasStart)return;
     const current=String(value.planned_finish||'').slice(0,10);
-    if(current&&current!==lastAuto.current)return; // respect a manual override
-    if(current===autoFinish){lastAuto.current=autoFinish;return;}
-    lastAuto.current=autoFinish;
+    if(current===autoFinish)return;
     set('planned_finish',autoFinish);
-  },[autoFinish,isPM]);// eslint-disable-line react-hooks/exhaustive-deps
+  },[autoFinish,isPM,hasStart]);// eslint-disable-line react-hooks/exhaustive-deps
   return <><section className="form-section"><h3>Job information</h3><fieldset disabled={restricted}>
     <div className="form-grid" style={{gridTemplateColumns:'1fr 1.5fr'}}>
       <label className="form-field">{isBreakIn?'Break-In ID':'Work order number'}<input type="text" required={!isBreakIn} value={value.wo_number||''} placeholder={isBreakIn?'Auto EM-ICMS-###':'WO number'} onChange={e=>set('wo_number',e.target.value)}/></label>

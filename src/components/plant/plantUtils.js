@@ -1,4 +1,12 @@
 import db from '@/lib/db';
+import {
+  SLA_THRESHOLDS,
+  slaThreshold,
+  allowableDays,
+  scheduledStart,
+  targetFinish,
+  applyTargetFinish,
+} from '@/lib/slaTarget';
 
 import { format, differenceInCalendarDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 
@@ -21,26 +29,10 @@ export const isTodayJob = (j, t = today()) => {
   return plannedDay ? plannedDay === t : localDay(j?.created_date) === t;
 };
 
-// Official Plant Priority SLA Matrix — allowable DCM Alarm days per priority
-// P1 Emergency +0 | P2 Urgent +4 | P3 Normal +20 | P4 Low +59 | P5 Shutdown excluded
-export const SLA_THRESHOLDS = { 'Critical': 0, 'High': 4, 'Medium': 20, 'Low': 59, 'Shutdown Item': null };
-
-export const slaThreshold = (priority) => SLA_THRESHOLDS[priority] ?? null;
-
-// Allowable days for a job, honouring the Shutdown Item override
-export const allowableDays = (j) => (j?.shutdown_item ? null : slaThreshold(j?.priority ?? 'Medium'));
-
-// Scheduled Start — user input or imported Maximo planned_start (YYYY-MM-DD)
-export const scheduledStart = (j) => localDay(j?.planned_start);
-
-// Scheduled Finish — auto-computed target date = Scheduled Start + allowable days.
-// Shutdown Items (P5) have no fixed target date.
-export const targetFinish = (j) => {
-  const start = scheduledStart(j);
-  const days = allowableDays(j);
-  if (!start || days === null) return '';
-  return format(new Date(new Date(start + 'T12:00:00').getTime() + days * 86400000), 'yyyy-MM-dd');
-};
+// Official Plant Priority SLA Matrix — allowable days per priority
+// P1 Emergency +0 | P2 Urgent +4 | P3 Normal +15 | P4 Low +45 | P5 Shutdown excluded
+// Single source of truth lives in @/lib/slaTarget so the data layer shares it.
+export { SLA_THRESHOLDS, slaThreshold, allowableDays, scheduledStart, targetFinish, applyTargetFinish };
 
 // True when any execution update exists on the work order
 export const hasExecutionUpdate = (j) => Boolean(
@@ -79,8 +71,17 @@ export const isExpired = (j) => {
 };
 
 // Aged only when overdue days exceed the priority's SLA threshold (Shutdown excluded)
+// On hold for shutdown or spare parts — not aged until ready to work again.
+export const isOnHoldForAging = (j) => {
+  if (!j) return false;
+  if (j.shutdown_item) return true;
+  if (j.status === 'Pending Parts') return true;
+  if (j.status === 'Deferred' && ['For Shutdown', 'For PR'].includes(j.deferred_reason)) return true;
+  return false;
+};
+
 export const aged = (j) => {
-  if (j.shutdown_item) return 0; // Shutdown Item — never ages
+  if (isOnHoldForAging(j)) return 0; // Shutdown / waiting on spare parts — never ages
   const threshold = slaThreshold(j.priority);
   if (threshold === null) return 0;
   const od = overdueDays(j);

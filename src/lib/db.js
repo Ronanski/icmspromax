@@ -7,6 +7,7 @@
 
 import supabase from "./supabaseClient";
 import parsePlantImport from "./parseImport";
+import { applyTargetFinish } from "./slaTarget";
 
 const TABLES = {
   Workspace: "workspaces",
@@ -690,6 +691,11 @@ async function plantWorkspace(payload = {}) {
         const table = tableOf(row);
         const dup = byNumber.get(key);
         if (dup && dup !== "pending") {
+          // Existing CM work order: re-apply the priority SLA rule using the
+          // imported values merged over what is already stored, so an import
+          // that only changes the priority or the scheduled start still moves
+          // the scheduled finish.
+          applyTargetFinish(row, dup);
           if (dup._table === table) {
             fail((await supabase.from(table).update({ ...forTable(table, row), updated_date: nowISO() }).eq("id", dup.id)).error);
           } else {
@@ -702,6 +708,7 @@ async function plantWorkspace(payload = {}) {
           }
           updated++;
         } else if (!dup) {
+          applyTargetFinish(row, { priority: "Medium" });
           inserts[table].push({ ...scope, priority: "Medium", status: "Open", created_date: nowISO(), ...forTable(table, row) });
           byNumber.set(key, "pending");
           created++;
@@ -768,6 +775,9 @@ async function plantWorkspace(payload = {}) {
 
       const wasPM = existing?.maintenance_type === "PM" || values.maintenance_type === "PM";
       const prevStatus = existing?.status;
+      // CM work: the scheduled finish always follows the priority SLA rule,
+      // so a priority change alone still shifts the finish date.
+      applyTargetFinish(values, existing);
       // Where this record belongs after the edit (job type may have changed).
       const targetTable = tableOf({ ...existing, ...values });
       let saved;
