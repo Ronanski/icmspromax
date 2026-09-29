@@ -45,13 +45,13 @@ type PresetSeed = Omit<CustomTheme, never> & { label: string; description: strin
 const PRESET_SEEDS: Record<ThemePresetKey, PresetSeed> = {
   light: {
     label: "Light",
-    description: "Clean industrial daylight with restrained blue accents",
-    mode: "light", primary: "#0A6ED1", secondary: "#2D8BC9", angle: 135, background: "#F6F8FA", card: "#FFFFFF", border: "#D7DDE4",
+    description: "Crisp daylight with a blue-to-teal accent",
+    mode: "light", primary: "#2563eb", secondary: "#12b5a5", angle: 135, background: "#f2f6fc", card: "#ffffff", border: "#e3e9f3",
   },
   dark: {
     label: "Dark",
-    description: "Industrial navy for low-light and night-shift work",
-    mode: "dark", primary: "#4DA3E8", secondary: "#2D7DB8", angle: 135, background: "#0D141B", card: "#151E27", border: "#30404E",
+    description: "Premium slate with vibrant violet accents",
+    mode: "dark", primary: "#8b5cf6", secondary: "#6366f1", angle: 135, background: "#0a0b10", card: "#15161f", border: "#282a38",
   },
   midnight: {
     label: "Midnight Navy",
@@ -194,10 +194,6 @@ function normalizePreference(value: unknown): ThemePreference | null {
   };
 }
 
-function lightenOrDarkenForTheme(mode: ThemeMode, hex: string) {
-  return mode === "dark" ? mixHex(hex, "#ffffff", 0.22) : hex;
-}
-
 export function applyPreference(preference: ThemePreference) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
@@ -214,11 +210,6 @@ export function applyPreference(preference: ThemePreference) {
     "--muted": hexToHsl(tokens.muted), "--muted-foreground": hexToHsl(tokens.mutedForeground),
     "--accent": hexToHsl(tokens.accent), "--accent-foreground": hexToHsl(tokens.foreground),
     "--border": hexToHsl(tokens.border), "--input": hexToHsl(tokens.border), "--ring": hexToHsl(tokens.primary),
-    "--chart-1": hexToHsl(tokens.primary),
-    "--chart-2": hexToHsl(tokens.secondary),
-    "--chart-3": hexToHsl(lightenOrDarkenForTheme(tokens.mode, "#2E7D32")),
-    "--chart-4": hexToHsl(lightenOrDarkenForTheme(tokens.mode, "#ED6C02")),
-    "--chart-5": hexToHsl(lightenOrDarkenForTheme(tokens.mode, "#C62828")),
     "--sidebar-background": hexToHsl(tokens.sidebar), "--sidebar-foreground": hexToHsl(tokens.foreground),
     "--sidebar-primary": hexToHsl(tokens.primary), "--sidebar-primary-foreground": hexToHsl(tokens.primaryForeground),
     "--sidebar-accent": hexToHsl(tokens.accent), "--sidebar-accent-foreground": hexToHsl(tokens.foreground),
@@ -240,14 +231,14 @@ function readLocalPreference(): ThemePreference {
   try {
     const saved = normalizePreference(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"));
     if (saved) return saved;
-    return localStorage.getItem(LEGACY_STORAGE_KEY) === "dark" ? "dark" : "light";
+    return localStorage.getItem(LEGACY_STORAGE_KEY) === "light" ? "light" : "dark";
   } catch {
-    return "light";
+    return "dark";
   }
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreference] = useState<ThemePreference>("light");
+  const [preference, setPreference] = useState<ThemePreference>("dark");
   const [preview, setPreview] = useState<ThemePreference | null>(null);
   const previewRef = useRef<ThemePreference | null>(null);
   previewRef.current = preview;

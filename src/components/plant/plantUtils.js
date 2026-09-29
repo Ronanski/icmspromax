@@ -339,9 +339,9 @@ export const isBacklog = (j) => ['Open', 'In-Progress', 'Rescheduled', 'Pending 
 
 // Four-category backlog classification, by how long the job has been waiting.
 export const BACKLOG_CATEGORIES = [
-  { key: 'fresh', label: 'Fresh', range: '0–7 days', color: 'var(--chart-3)', min: 0, max: 7 },
-  { key: 'watch', label: 'Watchlist', range: '8–30 days', color: 'var(--chart-4)', min: 8, max: 30 },
-  { key: 'aged', label: 'Aged', range: '31–90 days', color: 'var(--chart-5)', min: 31, max: 90 },
+  { key: 'fresh', label: 'Fresh', range: '0–7 days', color: '#34b99a', min: 0, max: 7 },
+  { key: 'watch', label: 'Watchlist', range: '8–30 days', color: '#f7bb53', min: 8, max: 30 },
+  { key: 'aged', label: 'Aged', range: '31–90 days', color: '#f97316', min: 31, max: 90 },
   { key: 'chronic', label: 'Chronic', range: 'over 90 days', color: '#dc2626', min: 91, max: Infinity },
 ];
 
@@ -383,7 +383,7 @@ export const backlogStats = (orders) => {
 };
 
 // Standard plant priority color palette (hex) for charts/legends
-export const PRIORITY_COLORS = { 'Critical': 'var(--chart-5)', 'High': 'var(--chart-4)', 'Medium': '#B45309', 'Low': 'var(--chart-1)', 'Shutdown Item': 'var(--muted-ink)' };
+export const PRIORITY_COLORS = { 'Critical': '#dc2626', 'High': '#ea580c', 'Medium': '#ca8a04', 'Low': '#3b82f6', 'Shutdown Item': '#9333ea' };
 
 export const safeFormatDate = (value, fmt = 'EEEE, dd MMMM yyyy') => {
   try {
