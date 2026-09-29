@@ -3,7 +3,7 @@ import {BarChart,Bar,XAxis,YAxis,CartesianGrid,Tooltip,ResponsiveContainer,PieCh
 import {ArrowUpRight,BarChart3,AlertCircle,Layers,Pin,PinOff} from 'lucide-react';
 import {statuses,units,aged,isBacklog,PRIORITY_COLORS,priorities,PRIORITY_LABELS,BACKLOG_CATEGORIES,backlogCategory,backlogStats} from '@/components/plant/plantUtils';
 
-const colors=['#818cf8','#38bdf8','#f97316','#34b99a','#f7bb53','#94a3b8'];
+const colors=['var(--chart-1)','var(--chart-2)','var(--chart-4)','var(--chart-3)','var(--chart-5)','var(--muted-ink)'];
 export const VOLUME_METRICS=[
   {key:'system',label:'Volume by System'},
   {key:'unit',label:'Volume by Unit'},
@@ -28,7 +28,7 @@ export default function Charts({orders,onDrill,onBacklogFilter,activeBacklogFilt
   const statusData=statuses.map((name,i)=>({name,value:orders.filter(j=>j.status===name).length,color:colors[i]}));
   const agedOrders=orders.filter(j=>aged(j)>0);
   const agedByUnit=units.map(u=>({name:u,value:orders.filter(j=>j.unit===u&&aged(j)>0).length})).filter(d=>d.value>0);
-  const priorityColors=volume.map(d=>PRIORITY_COLORS[d.name]||'#7772e8');
+  const priorityColors=volume.map(d=>PRIORITY_COLORS[d.name]||'var(--chart-1)');
 
   // Backlog: four waiting-time categories, plus the extra factors a supervisor
   // weighs before deciding what to push into the next shift.
@@ -98,7 +98,7 @@ export default function Charts({orders,onDrill,onBacklogFilter,activeBacklogFilt
 
     {!supervisorMode&&agedOrders.length>0&&<section className="panel chart-panel" style={{marginTop:16}}>
       <div className="panel-heading"><div><h3>Aged / Backlog Work Orders</h3><p>Past scheduled finish, no action taken, by unit · {agedOrders.length} total</p></div><AlertCircle size={17} className="muted"/></div>
-      <div className="bar-chart"><ResponsiveContainer width="100%" height={200}><BarChart data={agedByUnit} layout="vertical" margin={{top:5,right:20,left:20,bottom:5}}><CartesianGrid horizontal={false} strokeDasharray="3 4" stroke="var(--line)"/><XAxis type="number" allowDecimals={false} tick={{fontSize:10,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false}/><YAxis type="category" dataKey="name" tick={{fontSize:11,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false} width={70}/><Tooltip cursor={{fill:'var(--hover)'}} contentStyle={{background:'var(--surface)',border:'1px solid var(--line)',borderRadius:8}}/><Bar dataKey="value" name="Aged" fill="#f7bb53" radius={[0,4,4,0]} maxBarSize={28} cursor="pointer" onClick={d=>onDrill({unit:d.name,status:'Aged'})}/></BarChart></ResponsiveContainer></div>
+      <div className="bar-chart"><ResponsiveContainer width="100%" height={200}><BarChart data={agedByUnit} layout="vertical" margin={{top:5,right:20,left:20,bottom:5}}><CartesianGrid horizontal={false} strokeDasharray="3 4" stroke="var(--line)"/><XAxis type="number" allowDecimals={false} tick={{fontSize:10,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false}/><YAxis type="category" dataKey="name" tick={{fontSize:11,fill:'var(--muted-ink)'}} axisLine={false} tickLine={false} width={70}/><Tooltip cursor={{fill:'var(--hover)'}} contentStyle={{background:'var(--surface)',border:'1px solid var(--line)',borderRadius:8}}/><Bar dataKey="value" name="Aged" fill="var(--chart-4)" radius={[0,4,4,0]} maxBarSize={28} cursor="pointer" onClick={d=>onDrill({unit:d.name,status:'Aged'})}/></BarChart></ResponsiveContainer></div>
     </section>}
   </>;
 }
